@@ -87,6 +87,7 @@ const lbl: React.CSSProperties = {
 };
 const sectionTitle: React.CSSProperties = {
   fontSize: 10, letterSpacing: 3, color: '#7a6a50', textTransform: 'uppercase', marginBottom: 10,
+  fontFamily: 'system-ui, -apple-system, "Segoe UI", sans-serif', fontWeight: 500,
 };
 
 export default function App() {
@@ -682,7 +683,7 @@ export default function App() {
         <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 10 : 20, flexWrap: 'wrap' as any }}>
           {!isMobile && (
             <div>
-              <div style={{ fontSize: 10, letterSpacing: 4, color: '#7a6a50', textTransform: 'uppercase', marginBottom: 2 }}>Møbelplanlegger</div>
+              <div style={{ fontSize: 10, letterSpacing: 4, color: '#7a6a50', textTransform: 'uppercase', marginBottom: 2, fontFamily: 'system-ui, -apple-system, "Segoe UI", sans-serif', fontWeight: 500 }}>Møbelplanlegger</div>
             </div>
           )}
           {/* View tabs */}
@@ -774,7 +775,7 @@ export default function App() {
         {/* ── CANVAS / MAIN AREA ── */}
         {view === 'plan' && (
           <div style={{ flex: 1, overflow: 'auto', padding: isMobile ? 16 : 28, background: '#16140f' }}>
-            <div style={{ marginBottom: 10, fontSize: 10, letterSpacing: 2, color: '#4a3a28', textTransform: 'uppercase' as any }}>
+            <div style={{ marginBottom: 10, fontSize: 10, letterSpacing: 2, color: '#4a3a28', textTransform: 'uppercase' as any, fontFamily: 'system-ui, -apple-system, "Segoe UI", sans-serif', fontWeight: 500 }}>
               1 rute = 1 m &nbsp;·&nbsp; {floorItems.length} møbel{floorItems.length !== 1 ? 'er' : ''} plassert
             </div>
             <svg ref={svgRef}

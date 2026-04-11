@@ -2,75 +2,156 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 
 const SCALE = 32;
 
+/*
+  Bygningsbredde = 5m (indre mål). Dette stemmer best med arealene:
+  
+  ETASJE 1 (5m bred):
+    Terrasse 25m²: 5 × 5 = 25 ✓
+    Stue 35m²: 3.5m × 10m? Nei. Stue+trapp er 5m bredt:
+      Stue: 3.5 × 7 = 24.5... fortsatt for lite.
+    Prøver 6m bred:
+      Terrasse 25m²: 6 × 4.2 = 25 ✓
+      Stue 35m²: stue er 4.5m bred (trapp tar 1.5m): 4.5 × 7.8 = 35 ✓
+      Kjøkken 8m²: 3 × 2.7 = 8 ✓
+      Entré 4.5m²: 2 × 2.25 = 4.5 ✓
+      Terrasse bak 4m²: 2 × 2 = 4 ✓
+      Bod 5m²: 2.5 × 2 = 5 ✓
+    
+  ETASJE 2 (6m bred):
+    Sov 13m²: 4 × 3.25 = 13 ✓
+    Sov 7m²:  2 × 3.5 = 7 ✓  (4+2=6m ✓)
+    Trapp: smal, ved siden av Sov7
+    Bad 7.5m²: 3 × 2.5 = 7.5 ✓
+    Gang 8.5m²: 3 × 2.8 = 8.4 ✓
+    Sov 12m²: 6 × 2 = 12 ✓ (full bredde)
+    Altan 4m²: 2 × 2 utenfor
+
+  ETASJE 3 (6m bred):
+    Takterrasse 17m²: 6 × 2.8 = 16.8 ✓ (full bredde nord)
+    Stue 15.5m²: 5 × 3.1 = 15.5 ✓ (trapp 1m tar bredde til høyre)
+    Bod 1m²: 1 × 1 ✓
+    Soverom 8m²: 3.5 × 2.3 = 8 ✓
+    Vaskerom 4.5m²: 1.5 × 3 = 4.5 ✓
+*/
+
 const FLOORS = [
   {
-    // Bygget er ca 7m bredt, rommet er 18m langt (inkl. bod utenfor)
-    id: 1, name: '1. etasje', width: 9, height: 19,
+    id: 1, name: '1. etasje', width: 8, height: 22,
     rooms: [
-      // Terrasse nord – full bygningsbredde (7m), ca 5m dyp
-      { id: 'terrasse_top', name: 'Terrasse 25m²', x: 1, y: 0.5, w: 7, h: 5, color: '#e8e0d0', dashed: true },
+      // Terrasse nord: 6m × 4.2m = 25m²
+      { id: 'terrasse_top', name: 'Terrasse 25m²',
+        x: 1, y: 0,   w: 6,   h: 4.2,
+        color: '#e8e0d0', dashed: true },
 
-      // Stue – venstre kolonne, 5.5m bred, 6m høy
-      { id: 'stue1', name: 'Stue 35m²', x: 1, y: 5.5, w: 5.5, h: 6, color: '#f0ede8' },
-      // Trapp – høyre kolonne, 1.5m bred, 4m høy
-      { id: 'trapp1', name: 'Trapp', x: 6.5, y: 5.5, w: 1.5, h: 4, color: '#e4e0da' },
-      // Tek.rom – høyre kolonne, under trapp, 1.5×2m
-      { id: 'tekrom', name: 'Tek.Rom 2m²', x: 6.5, y: 9.5, w: 1.5, h: 2, color: '#e0dbd2' },
+      // Stue: 4.5m × 7.8m = 35m²
+      { id: 'stue1', name: 'Stue 35m²',
+        x: 1, y: 4.2, w: 4.5, h: 7.8,
+        color: '#f0ede8' },
 
-      // Kjøkken – venstre, 3m bred, 3m dyp
-      { id: 'kjokken', name: 'Kjøkken 8m²', x: 1, y: 11.5, w: 3, h: 3, color: '#e8f0ed' },
-      // Entré – til høyre for kjøkken, 2.5m bred, 3m dyp
-      { id: 'entre', name: 'Entré 4,5m²', x: 4, y: 11.5, w: 2.5, h: 3, color: '#ede8f0' },
+      // Trapp: 1.5m × 5m, høyre kolonne
+      { id: 'trapp1', name: 'Trapp',
+        x: 5.5, y: 4.2, w: 1.5, h: 5.0,
+        color: '#e4e0da' },
 
-      // Terrasse bak – midtstilt, 2.5m bred, 1.5m dyp – UNDER kjøkken/entré
-      { id: 'terrasse_bak', name: 'Terrasse 4m²', x: 2.5, y: 14.5, w: 2.5, h: 1.5, color: '#e8e0d0', dashed: true },
+      // Tek.Rom: 1.5m × 1.3m ≈ 2m², under trapp
+      { id: 'tekrom', name: 'Tek.Rom 2m²',
+        x: 5.5, y: 9.2, w: 1.5, h: 1.3,
+        color: '#e0dbd2' },
 
-      // Bod – sørøst, utenfor/ved siden – 3m bred, 2.5m høy
-      { id: 'bod1', name: 'Bod 5m²', x: 5, y: 15.5, w: 3, h: 2.5, color: '#e0dbd2' },
+      // Kjøkken: 3m × 2.7m = 8m², sørvenstre
+      { id: 'kjokken', name: 'Kjøkken 8m²',
+        x: 1,   y: 12.0, w: 3.0, h: 2.7,
+        color: '#e8f0ed' },
+
+      // Entré: 2m × 2.25m = 4.5m², ved siden av kjøkken
+      { id: 'entre', name: 'Entré 4,5m²',
+        x: 4.0, y: 12.0, w: 2.0, h: 2.25,
+        color: '#ede8f0' },
+
+      // Terrasse bak: 2m × 2m = 4m², midtstilt under entré
+      { id: 'terrasse_bak', name: 'Terrasse 4m²',
+        x: 2.5, y: 14.25, w: 2.0, h: 2.0,
+        color: '#e8e0d0', dashed: true },
+
+      // Bod: 2.5m × 2m = 5m², sørøst
+      { id: 'bod1', name: 'Bod 5m²',
+        x: 4.5, y: 15.0, w: 2.5, h: 2.0,
+        color: '#e0dbd2' },
     ],
   },
+
   {
-    // Bygget er ca 7m bredt, 14m langt
-    id: 2, name: '2. etasje', width: 9, height: 17,
+    id: 2, name: '2. etasje', width: 8, height: 16,
     rooms: [
-      // Soverom 13m² – nordvest, 4m bred, 5m dyp
-      { id: 'sov1', name: 'Soverom 13m²', x: 1, y: 0.5, w: 4, h: 5, color: '#e8edf0' },
-      // Soverom 7m² – nordmidtre, 2m bred, 5m dyp
-      { id: 'sov2', name: 'Soverom 7m²', x: 5, y: 0.5, w: 2, h: 5, color: '#e8edf0' },
-      // Trapp – nordøst, smal 1m bred, 5m dyp
-      { id: 'trapp2', name: 'Trapp', x: 7, y: 0.5, w: 1, h: 5, color: '#e4e0da' },
+      // Soverom 13m²: 4m × 3.25m, nordvest
+      { id: 'sov1', name: 'Soverom 13m²',
+        x: 0, y: 0,   w: 4.0, h: 3.25,
+        color: '#e8edf0' },
 
-      // Bad – sørvenstre av midtsonen, 4m bred, 3.5m dyp
-      { id: 'bad', name: 'Bad 7,5m²', x: 1, y: 5.5, w: 4, h: 3.5, color: '#d6eaf8' },
-      // Gang M/trapp – høyre av midtsonen, 3m bred, 3.5m dyp
-      { id: 'gang2', name: 'Gang M/trapp 8,5m²', x: 5, y: 5.5, w: 3, h: 3.5, color: '#f0ede8' },
+      // Soverom 7m²: 2m × 3.5m, nordmidt
+      { id: 'sov2', name: 'Soverom 7m²',
+        x: 4.0, y: 0, w: 2.0, h: 3.5,
+        color: '#e8edf0' },
 
-      // Soverom 12m² – sørsone, full bredde 7m, 4m dyp
-      { id: 'sov3', name: 'Soverom 12m²', x: 1, y: 9, w: 7, h: 4, color: '#e8edf0' },
+      // Trapp: 0.5m × 3.5m, nordøst
+      { id: 'trapp2', name: 'Trapp',
+        x: 6.0, y: 0, w: 0.5, h: 3.5,
+        color: '#e4e0da' },
 
-      // Altan – utenfor sørvest, 2.5m bred, 2m dyp
-      { id: 'altan', name: 'Altan 4m²', x: 5.5, y: 13, w: 2.5, h: 2, color: '#e8e0d0', dashed: true },
+      // Bad: 3m × 2.5m = 7.5m², midtvenstre
+      { id: 'bad', name: 'Bad 7,5m²',
+        x: 0,   y: 3.5, w: 3.0, h: 2.5,
+        color: '#d6eaf8' },
+
+      // Gang M/trapp: 3m × 2.8m ≈ 8.5m², midthøyre
+      { id: 'gang2', name: 'Gang M/trapp 8,5m²',
+        x: 3.0, y: 3.5, w: 3.5, h: 2.5,
+        color: '#f0ede8' },
+
+      // Soverom 12m²: 6m × 2m, full bredde sør
+      { id: 'sov3', name: 'Soverom 12m²',
+        x: 0,   y: 6.0, w: 6.0, h: 2.0,
+        color: '#e8edf0' },
+
+      // Altan: 2m × 2m, utenfor sørøst
+      { id: 'altan', name: 'Altan 4m²',
+        x: 4.0, y: 8.0, w: 2.0, h: 2.0,
+        color: '#e8e0d0', dashed: true },
     ],
   },
+
   {
-    // Bygget ca 5m bredt, takterrassen er til høyre utenfor
-    id: 3, name: '3. etasje', width: 9, height: 15,
+    id: 3, name: '3. etasje', width: 9, height: 13,
     rooms: [
-      // Takterrasse – nordøst, UTENFOR selve bygget til høyre
-      // I originalbildet er takterrassen en åpen flate nord/høyre med stiplet kant
-      { id: 'takter', name: 'Takterrasse 17m²', x: 3.5, y: 0.5, w: 5, h: 5, color: '#e8e0d0', dashed: true },
+      // Takterrasse: 6m × 2.8m ≈ 17m², nord, full bredde
+      { id: 'takter', name: 'Takterrasse 17m²',
+        x: 1, y: 0,   w: 6.0, h: 2.8,
+        color: '#e8e0d0', dashed: true },
 
-      // Stue – venstre hoveddel, 5m bred, 5m høy
-      { id: 'stue3', name: 'Stue 15,5m²', x: 1, y: 5.5, w: 5, h: 4.5, color: '#f0ede8' },
-      // Bod – høyre øvre, lite 1.5×1.5m
-      { id: 'bod3', name: 'Bod 1m²', x: 6, y: 5.5, w: 1.5, h: 1.5, color: '#e0dbd2' },
-      // Trapp – høyre, under bod, 1.5m bred, 3m høy
-      { id: 'trapp3', name: 'Trapp', x: 6, y: 7, w: 1.5, h: 3, color: '#e4e0da' },
+      // Stue: 5m × 3.1m = 15.5m², under takterrasse venstre
+      { id: 'stue3', name: 'Stue 15,5m²',
+        x: 1, y: 2.8, w: 5.0, h: 3.1,
+        color: '#f0ede8' },
 
-      // Soverom – sørvenstre, 4m bred, 4m høy
-      { id: 'sov4', name: 'Soverom 8m²', x: 1, y: 10, w: 4, h: 4, color: '#e8edf0' },
-      // Vaskerom – sørmidtre, 2m bred, 4m høy
-      { id: 'vask', name: 'Vaskerom 4,5m²', x: 5, y: 10, w: 2, h: 4, color: '#d6eaf8' },
+      // Bod: 1m × 1m, øvre høyre
+      { id: 'bod3', name: 'Bod 1m²',
+        x: 6.0, y: 2.8, w: 1.0, h: 1.0,
+        color: '#e0dbd2' },
+
+      // Trapp: 1m × 2.1m, høyre under bod
+      { id: 'trapp3', name: 'Trapp',
+        x: 6.0, y: 3.8, w: 1.0, h: 2.1,
+        color: '#e4e0da' },
+
+      // Soverom: 3.5m × 2.3m = 8m², sørvenstre
+      { id: 'sov4', name: 'Soverom 8m²',
+        x: 1,   y: 5.9, w: 3.5, h: 2.3,
+        color: '#e8edf0' },
+
+      // Vaskerom: 1.5m × 3m = 4.5m², sørmidt
+      { id: 'vask', name: 'Vaskerom 4,5m²',
+        x: 4.5, y: 5.9, w: 1.5, h: 3.0,
+        color: '#d6eaf8' },
     ],
   },
 ];

@@ -4,43 +4,63 @@ const SCALE = 32;
 
 const FLOORS = [
   {
-    id: 1, name: '1. etasje', width: 9, height: 18,
+    id: 1, name: '1. etasje', width: 9, height: 20,
     rooms: [
-      { id: 'terrasse_top', name: 'Terrasse 25m²', x: 1.5, y: 0.2, w: 5, h: 5, color: '#e8e0d0', dashed: true },
-      { id: 'stue1', name: 'Stue 35m²', x: 1.5, y: 5.2, w: 5, h: 7, color: '#f0ede8' },
-      { id: 'trapp1', name: 'Trapp', x: 6.5, y: 5.2, w: 1.5, h: 4.3, color: '#e4e0da' },
-      { id: 'tekrom', name: 'Tek.rom 2m²', x: 6.5, y: 9.5, w: 1.5, h: 1.5, color: '#e0dbd2' },
-      { id: 'kjokken', name: 'Kjøkken 8m²', x: 1.5, y: 12.2, w: 3, h: 2.8, color: '#e8f0ed' },
-      { id: 'entre', name: 'Entré 4,5m²', x: 4.5, y: 12.2, w: 2, h: 2.8, color: '#ede8f0' },
-      { id: 'terrasse_bak', name: 'Terrasse 4m²', x: 3.5, y: 15, w: 3, h: 1.5, color: '#e8e0d0', dashed: true },
-      { id: 'bod1', name: 'Bod 5m²', x: 2.5, y: 16.5, w: 3.5, h: 1.8, color: '#e0dbd2' },
+      // Terrasse øverst (nord)
+      { id: 'terrasse_top', name: 'Terrasse 25m²', x: 0.5, y: 0.3, w: 6, h: 5.5, color: '#e8e0d0', dashed: true },
+      // Stue – stor midtrom
+      { id: 'stue1', name: 'Stue 35m²', x: 0.5, y: 5.8, w: 6, h: 7, color: '#f0ede8' },
+      // Trapp – høyre side, midten
+      { id: 'trapp1', name: 'Trapp', x: 6.5, y: 5.8, w: 2, h: 4.5, color: '#e4e0da' },
+      // Tek.rom – under trappen
+      { id: 'tekrom', name: 'Tek.Rom 2m²', x: 6.5, y: 10.3, w: 2, h: 1.5, color: '#e0dbd2' },
+      // Kjøkken – venstre, nedre del
+      { id: 'kjokken', name: 'Kjøkken 8m²', x: 0.5, y: 12.8, w: 3.5, h: 3, color: '#e8f0ed' },
+      // Entré – høyre for kjøkken
+      { id: 'entre', name: 'Entré 4,5m²', x: 4.0, y: 12.8, w: 2.5, h: 3, color: '#ede8f0' },
+      // Terrasse bak (sør) – liten, midtstilt
+      { id: 'terrasse_bak', name: 'Terrasse 4m²', x: 2.5, y: 15.8, w: 3.5, h: 1.5, color: '#e8e0d0', dashed: true },
+      // Bod – sørøst
+      { id: 'bod1', name: 'Bod 5m²', x: 4.5, y: 17.3, w: 3.5, h: 2.5, color: '#e0dbd2' },
     ],
   },
   {
-    id: 2, name: '2. etasje', width: 9, height: 16,
+    id: 2, name: '2. etasje', width: 9, height: 17,
     rooms: [
-      { id: 'sov1', name: 'Soverom 13m²', x: 0.5, y: 0.5, w: 4.5, h: 4.5, color: '#e8edf0' },
-      { id: 'sov2', name: 'Soverom 7m²', x: 5, y: 0.5, w: 1.5, h: 4.5, color: '#e8edf0' },
-      { id: 'trapp2', name: 'Trapp', x: 6.5, y: 0.5, w: 1.5, h: 8, color: '#e4e0da' },
-      { id: 'bad', name: 'Bad 7,5m²', x: 0.5, y: 5, w: 4.5, h: 3.5, color: '#d6eaf8' },
-      { id: 'gang2', name: 'Gang M/trapp', x: 5, y: 5, w: 1.5, h: 3.5, color: '#f0ede8' },
-      { id: 'sov3', name: 'Soverom 12m²', x: 0.5, y: 8.5, w: 6, h: 4, color: '#e8edf0' },
-      { id: 'altan', name: 'Altan 4m²', x: 5.5, y: 12.5, w: 2.5, h: 2, color: '#e8e0d0', dashed: true },
+      // Soverom 13m² – nordvest
+      { id: 'sov1', name: 'Soverom 13m²', x: 0.5, y: 0.5, w: 4.5, h: 5, color: '#e8edf0' },
+      // Soverom 7m² – nordøst (smalere)
+      { id: 'sov2', name: 'Soverom 7m²', x: 5.0, y: 0.5, w: 2, h: 5, color: '#e8edf0' },
+      // Trapp – ytterst høyre, nord
+      { id: 'trapp2', name: 'Trapp', x: 7.0, y: 0.5, w: 1.5, h: 5, color: '#e4e0da' },
+      // Bad – venstre midtre
+      { id: 'bad', name: 'Bad 7,5m²', x: 0.5, y: 5.5, w: 4.5, h: 4, color: '#d6eaf8' },
+      // Gang M/trapp – midtre (mellom bad og trapp)
+      { id: 'gang2', name: 'Gang M/trapp 8,5m²', x: 5.0, y: 5.5, w: 3.5, h: 4, color: '#f0ede8' },
+      // Soverom 12m² – sørlig, bred
+      { id: 'sov3', name: 'Soverom 12m²', x: 0.5, y: 9.5, w: 8, h: 4.5, color: '#e8edf0' },
+      // Altan – sørøst, utenfor
+      { id: 'altan', name: 'Altan 4m²', x: 5.5, y: 14.0, w: 3, h: 2, color: '#e8e0d0', dashed: true },
     ],
   },
   {
-    id: 3, name: '3. etasje', width: 9, height: 14,
+    id: 3, name: '3. etasje', width: 9, height: 16,
     rooms: [
-      { id: 'takter', name: 'Takterrasse 17m²', x: 0.5, y: 0.2, w: 7.5, h: 4, color: '#e8e0d0', dashed: true },
-      { id: 'bod3', name: 'Bod 1m²', x: 6.5, y: 4.2, w: 1.5, h: 1.5, color: '#e0dbd2' },
-      { id: 'stue3', name: 'Stue 15,5m²', x: 0.5, y: 4.2, w: 6, h: 4.5, color: '#f0ede8' },
-      { id: 'trapp3', name: 'Trapp', x: 6.5, y: 5.7, w: 1.5, h: 6, color: '#e4e0da' },
-      { id: 'sov4', name: 'Soverom 8m²', x: 0.5, y: 8.7, w: 3.5, h: 3, color: '#e8edf0' },
-      { id: 'vask', name: 'Vaskerom 4,5m²', x: 4, y: 8.7, w: 2.5, h: 3, color: '#d6eaf8' },
+      // Takterrasse – nordlig, stor åpen
+      { id: 'takter', name: 'Takterrasse 17m²', x: 1.5, y: 0.3, w: 6, h: 4.5, color: '#e8e0d0', dashed: true },
+      // Stue – midtre, bred
+      { id: 'stue3', name: 'Stue 15,5m²', x: 0.5, y: 4.8, w: 6, h: 5, color: '#f0ede8' },
+      // Bod – nordøst, lite rom
+      { id: 'bod3', name: 'Bod 1m²', x: 6.5, y: 4.8, w: 2, h: 1.5, color: '#e0dbd2' },
+      // Trapp – høyre side
+      { id: 'trapp3', name: 'Trapp', x: 6.5, y: 6.3, w: 2, h: 5.5, color: '#e4e0da' },
+      // Soverom 8m² – sørvest
+      { id: 'sov4', name: 'Soverom 8m²', x: 0.5, y: 9.8, w: 4, h: 4, color: '#e8edf0' },
+      // Vaskerom – sørøst
+      { id: 'vask', name: 'Vaskerom 4,5m²', x: 4.5, y: 9.8, w: 2, h: 4, color: '#d6eaf8' },
     ],
   },
 ];
-
 const PRESETS = [
   { name: 'Sofa (3-seter)', w: 2.2, h: 0.9, color: '#8B7355' },
   { name: 'Sofa m/sjeselong (H)', w: 2.6, h: 1.5, color: '#8B7355', shape: 'l-shape', legW: 1.3, legH: 0.9, legCorner: 'bl' },

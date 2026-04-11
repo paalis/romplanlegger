@@ -114,6 +114,11 @@ export default function App() {
   const [catalog, setCatalog] = useState<any[]>(() => { try { return JSON.parse(localStorage.getItem('rp_catalog') || '[]'); } catch { return []; } });
   const [catalogCategory, setCatalogCategory] = useState<string | null>(null);
 
+  /* ── zoom/pan ── */
+  const [vb, setVb] = useState({ x: 0, y: 0, scale: 1 });
+  const [panStart, setPanStart] = useState<{ cx: number; cy: number; vx: number; vy: number } | null>(null);
+  const panMovedRef = useRef(false);
+
   /* ── responsive ── */
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
   const [leftOpen, setLeftOpen] = useState(false);
@@ -131,30 +136,59 @@ export default function App() {
   useEffect(() => { localStorage.setItem('rp_furniture', JSON.stringify(furniture)); }, [furniture]);
   useEffect(() => { localStorage.setItem('rp_alternatives', JSON.stringify(alternatives)); }, [alternatives]);
   useEffect(() => { localStorage.setItem('rp_catalog', JSON.stringify(catalog)); }, [catalog]);
+  useEffect(() => { setVb({ x: 0, y: 0, scale: 1 }); }, [activeFloor]);
 
   const floor = FLOORS.find((f) => f.id === activeFloor)!;
   const selItem = furniture.find((f) => f.id === selected);
 
   const getSvgXY = (e: React.MouseEvent) => {
     const r = svgRef.current!.getBoundingClientRect();
-    const svgW = floor.width * SCALE + 80;
-    const s = r.width / svgW;
-    return { x: (e.clientX - r.left) / s - 40, y: (e.clientY - r.top) / s - 40 };
+    const totalW = floor.width * SCALE + 80;
+    const vbW = totalW / vb.scale;
+    const s = r.width / vbW;
+    return { x: (e.clientX - r.left) / s + vb.x - 40, y: (e.clientY - r.top) / s + vb.y - 40 };
+  };
+
+  const onWheel = (e: React.WheelEvent) => {
+    e.preventDefault();
+    if (!svgRef.current) return;
+    const r = svgRef.current.getBoundingClientRect();
+    const totalW = floor.width * SCALE + 80;
+    const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
+    const newScale = Math.max(0.5, Math.min(8, vb.scale * factor));
+    const vbW = totalW / vb.scale;
+    const s = r.width / vbW;
+    const mx = (e.clientX - r.left) / s + vb.x;
+    const my = (e.clientY - r.top) / s + vb.y;
+    const newVbW = totalW / newScale;
+    setVb({ scale: newScale, x: mx - (e.clientX - r.left) * newVbW / r.width, y: my - (e.clientY - r.top) * newVbW / r.width });
   };
 
   const onMouseMove = useCallback((e: React.MouseEvent) => {
-    if (!dragging) return;
-    const p = getSvgXY(e);
-    setFurniture((prev) =>
-      prev.map((f) =>
-        f.id === dragging
-          ? { ...f, x: Math.max(0, (p.x - dragOffset.x) / SCALE), y: Math.max(0, (p.y - dragOffset.y) / SCALE) }
-          : f
-      )
-    );
-  }, [dragging, dragOffset]);
+    if (dragging) {
+      const r = svgRef.current!.getBoundingClientRect();
+      const totalW = floor.width * SCALE + 80;
+      const vbW = totalW / vb.scale;
+      const s = r.width / vbW;
+      const p = { x: (e.clientX - r.left) / s + vb.x - 40, y: (e.clientY - r.top) / s + vb.y - 40 };
+      setFurniture((prev) =>
+        prev.map((f) =>
+          f.id === dragging
+            ? { ...f, x: Math.max(0, (p.x - dragOffset.x) / SCALE), y: Math.max(0, (p.y - dragOffset.y) / SCALE) }
+            : f
+        )
+      );
+    } else if (panStart) {
+      panMovedRef.current = true;
+      const r = svgRef.current!.getBoundingClientRect();
+      const totalW = floor.width * SCALE + 80;
+      const vbW = totalW / vb.scale;
+      const s = r.width / vbW;
+      setVb((prev) => ({ ...prev, x: panStart.vx - (e.clientX - panStart.cx) / s, y: panStart.vy - (e.clientY - panStart.cy) / s }));
+    }
+  }, [dragging, dragOffset, panStart, vb.scale, floor.width]);
 
-  const onMouseUp = useCallback(() => setDragging(null), []);
+  const onMouseUp = useCallback(() => { setDragging(null); setPanStart(null); }, []);
 
   const startDrag = (e: React.MouseEvent, item: any) => {
     e.stopPropagation();
@@ -239,7 +273,7 @@ export default function App() {
     .filter((a) => a.status === 'valgt' && a.price)
     .reduce((s, a) => s + (parseFloat(a.price) || 0), 0);
 
-  const addToCatalog = () => {
+  const addToCatalog = async () => {
     if (!(form as any).name) return;
     const item = {
       id: Date.now(),
@@ -260,6 +294,30 @@ export default function App() {
     setForm(emptyForm);
     setShowForm(false);
     if (isMobile) setLeftOpen(false);
+    // Auto-hent bilde hvis URL finnes men ikke bilde
+    if (item.url && !item.imageUrl) {
+      try {
+        const res = await fetch(`/api/scrape?url=${encodeURIComponent(item.url)}`);
+        const data = await res.json();
+        if (data.imageUrl) {
+          setCatalog((prev) => prev.map((c) => c.id === item.id ? { ...c, imageUrl: data.imageUrl } : c));
+        }
+      } catch {}
+    }
+  };
+
+  const fetchCatalogItemImage = async (itemId: number, url: string) => {
+    setFetchingImageId(itemId);
+    try {
+      const res = await fetch(`/api/scrape?url=${encodeURIComponent(url)}`);
+      const data = await res.json();
+      if (data.imageUrl) {
+        setCatalog((prev) => prev.map((c) => c.id === itemId ? { ...c, imageUrl: data.imageUrl } : c));
+      } else {
+        alert('Fant ikke bilde på siden.');
+      }
+    } catch {}
+    finally { setFetchingImageId(null); }
   };
 
   const addFromCatalog = (item: any) => {
@@ -878,15 +936,31 @@ export default function App() {
         {/* ── CANVAS / MAIN AREA ── */}
         {view === 'plan' && (
           <div style={{ flex: 1, overflow: 'auto', padding: isMobile ? 16 : 28, background: '#16140f' }}>
-            <div style={{ marginBottom: 10, fontSize: 10, letterSpacing: 2, color: '#4a3a28', textTransform: 'uppercase' as any, fontFamily: 'system-ui, -apple-system, "Segoe UI", sans-serif', fontWeight: 500 }}>
-              1 rute = 1 m &nbsp;·&nbsp; {floorItems.length} møbel{floorItems.length !== 1 ? 'er' : ''} plassert
+            <div style={{ marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ fontSize: 10, letterSpacing: 2, color: '#4a3a28', textTransform: 'uppercase' as any, fontFamily: 'system-ui, -apple-system, "Segoe UI", sans-serif', fontWeight: 500 }}>
+                1 rute = 1 m &nbsp;·&nbsp; {floorItems.length} møbel{floorItems.length !== 1 ? 'er' : ''} plassert
+              </div>
+              <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                {vb.scale !== 1 && (
+                  <button onClick={() => setVb({ x: 0, y: 0, scale: 1 })}
+                    style={{ padding: '3px 8px', background: 'transparent', border: '1px solid #3a342a', color: '#6a5a40', cursor: 'pointer', fontSize: 10, fontFamily: 'Georgia, serif', borderRadius: 3 }}>
+                    nullstill
+                  </button>
+                )}
+                <button onClick={() => setVb((v) => ({ ...v, scale: Math.min(8, v.scale * 1.3) }))}
+                  style={{ width: 26, height: 26, background: '#211e17', border: '1px solid #3a342a', color: '#9a8a70', cursor: 'pointer', fontSize: 16, lineHeight: 1, borderRadius: 3 }}>+</button>
+                <button onClick={() => setVb((v) => ({ ...v, scale: Math.max(0.5, v.scale / 1.3) }))}
+                  style={{ width: 26, height: 26, background: '#211e17', border: '1px solid #3a342a', color: '#9a8a70', cursor: 'pointer', fontSize: 16, lineHeight: 1, borderRadius: 3 }}>−</button>
+              </div>
             </div>
             <div style={{ maxWidth: floor.width * SCALE * 2 + 80, width: '100%' }}>
             <svg ref={svgRef}
-              viewBox={`0 0 ${floor.width * SCALE + 80} ${floor.height * SCALE + 80}`}
+              viewBox={`${vb.x} ${vb.y} ${(floor.width * SCALE + 80) / vb.scale} ${(floor.height * SCALE + 80) / vb.scale}`}
               onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseLeave={onMouseUp}
-              onClick={() => setSelected(null)}
-              style={{ width: '100%', height: 'auto', cursor: dragging ? 'grabbing' : 'default', userSelect: 'none', display: 'block' }}>
+              onMouseDown={(e) => { if (!dragging) { panMovedRef.current = false; setPanStart({ cx: e.clientX, cy: e.clientY, vx: vb.x, vy: vb.y }); } }}
+              onWheel={onWheel}
+              onClick={() => { if (!panMovedRef.current) setSelected(null); }}
+              style={{ width: '100%', height: 'auto', cursor: dragging ? 'grabbing' : panStart ? 'grabbing' : 'grab', userSelect: 'none', display: 'block' }}>
               <defs>
                 <pattern id="g1" width={SCALE} height={SCALE} patternUnits="userSpaceOnUse">
                   <path d={`M ${SCALE} 0 L 0 0 0 ${SCALE}`} fill="none" stroke="#252018" strokeWidth="0.6" />
@@ -1171,7 +1245,7 @@ export default function App() {
                                   onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                               )}
                               {item.url && (
-                                <button onClick={() => fetchItemImage(item.id, item.url)} disabled={isFetchingImg}
+                                <button onClick={() => fetchCatalogItemImage(item.id, item.url)} disabled={isFetchingImg}
                                   style={{ position: 'absolute' as const, bottom: 6, left: '50%', transform: 'translateX(-50%)', padding: '4px 8px', background: '#1a1812cc', border: '1px solid #3a342a', borderRadius: 3, color: '#9a8a70', fontSize: 10, cursor: 'pointer', whiteSpace: 'nowrap' as const, fontFamily: 'Georgia, serif' }}>
                                   {isFetchingImg ? '…henter' : item.imageUrl ? 'Oppdater bilde' : 'Hent bilde'}
                                 </button>

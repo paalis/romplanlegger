@@ -73,7 +73,7 @@ const emptyAltForm = {
   category: 'Sofa', name: '', brand: '', width: '', height: '', depth: '',
   color: '#8B7355', colorName: '', price: '', url: '', material: '', notes: '', imageUrl: '', status: 'vurderer',
 };
-const emptyForm = { name: '', width: '', height: '', url: '', price: '', color: '#8B7355', shape: 'rect', legW: '', legH: '', legCorner: 'bl' };
+const emptyForm = { name: '', width: '', height: '', url: '', price: '', color: '#8B7355', shape: 'rect', legW: '', legH: '', legCorner: 'bl', imageUrl: '' };
 
 /* ── shared style helpers ── */
 const inp = (extra: React.CSSProperties = {}): React.CSSProperties => ({
@@ -90,7 +90,7 @@ const sectionTitle: React.CSSProperties = {
 };
 
 export default function App() {
-  const [view, setView] = useState<'plan' | 'alternativer'>('plan');
+  const [view, setView] = useState<'plan' | 'alternativer' | 'mobelliste'>('plan');
   const [activeFloor, setActiveFloor] = useState(1);
   const [furniture, setFurniture] = useState<any[]>([]);
   const [selected, setSelected] = useState<number | null>(null);
@@ -109,6 +109,7 @@ export default function App() {
   const [expandedAlt, setExpandedAlt] = useState<number | null>(null);
   const [scraping, setScraping] = useState(false);
   const [altScraping, setAltScraping] = useState(false);
+  const [fetchingImageId, setFetchingImageId] = useState<number | null>(null);
 
   /* ── responsive ── */
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
@@ -129,7 +130,9 @@ export default function App() {
 
   const getSvgXY = (e: React.MouseEvent) => {
     const r = svgRef.current!.getBoundingClientRect();
-    return { x: e.clientX - r.left - 40, y: e.clientY - r.top - 40 };
+    const svgW = floor.width * SCALE + 80;
+    const s = r.width / svgW;
+    return { x: (e.clientX - r.left) / s - 40, y: (e.clientY - r.top) / s - 40 };
   };
 
   const onMouseMove = useCallback((e: React.MouseEvent) => {
@@ -161,7 +164,7 @@ export default function App() {
     if (!base.name || !base.width || !base.height) return;
     setFurniture((prev) => [
       ...prev,
-      { id: Date.now(), ...base, url: form.url, price: form.price, x: 2, y: 2, floorId: activeFloor, rotation: 0 },
+      { id: Date.now(), ...base, url: form.url, price: form.price, imageUrl: (form as any).imageUrl || '', x: 2, y: 2, floorId: activeFloor, rotation: 0 },
     ]);
     if (!preset) { setForm(emptyForm); setShowForm(false); }
     if (isMobile) setLeftOpen(false);
@@ -243,10 +246,11 @@ export default function App() {
           width: data.width != null ? String(data.width) : prev.width,
           height: data.depth != null ? String(data.depth) : prev.height,
           price: data.price != null ? String(data.price) : prev.price,
+          imageUrl: data.imageUrl || (prev as any).imageUrl || '',
           ...(data.shape === 'l-shape' && {
             shape: 'l-shape',
-            legW: data.legW != null ? String(data.legW) : prev.legW,
-            legH: data.legH != null ? String(data.legH) : prev.legH,
+            legW: data.legW != null ? String(data.legW) : (prev as any).legW,
+            legH: data.legH != null ? String(data.legH) : (prev as any).legH,
           }),
         } as any));
       } else {
@@ -267,6 +271,18 @@ export default function App() {
     } finally {
       if (target === 'plan') setScraping(false); else setAltScraping(false);
     }
+  };
+
+  const fetchItemImage = async (itemId: number, url: string) => {
+    setFetchingImageId(itemId);
+    try {
+      const res = await fetch(`/api/scrape?url=${encodeURIComponent(url)}`);
+      const data = await res.json();
+      if (data.imageUrl) {
+        setFurniture((prev: any[]) => prev.map((f) => f.id === itemId ? { ...f, imageUrl: data.imageUrl } : f));
+      }
+    } catch {}
+    finally { setFetchingImageId(null); }
   };
 
   /* ── sub-components ── */
@@ -662,10 +678,10 @@ export default function App() {
           )}
           {/* View tabs */}
           <div style={{ display: 'flex', gap: 6 }}>
-            {(['plan', 'alternativer'] as const).map((v) => (
+            {(['plan', 'alternativer', 'mobelliste'] as const).map((v) => (
               <button key={v} onClick={() => setView(v)}
                 style={{ padding: isMobile ? '8px 13px' : '8px 18px', border: '1px solid', fontFamily: 'Georgia, serif', fontSize: isMobile ? 13 : 13, cursor: 'pointer', borderRadius: 3, borderColor: view === v ? '#c8a96e' : '#3a342a', background: view === v ? '#c8a96e' : 'transparent', color: view === v ? '#1a1812' : '#9a8a70' }}>
-                {v === 'plan' ? 'Plantegning' : `Alternativer${alternatives.length ? ` (${alternatives.length})` : ''}`}
+                {v === 'plan' ? 'Plantegning' : v === 'alternativer' ? `Alternativer${alternatives.length ? ` (${alternatives.length})` : ''}` : `Møbler${furniture.length ? ` (${furniture.length})` : ''}`}
               </button>
             ))}
           </div>
@@ -723,7 +739,7 @@ export default function App() {
         {isMobile && rightOpen && <Backdrop onClose={() => setRightOpen(false)} />}
 
         {/* LEFT PANEL */}
-        {isMobile ? (
+        {view !== 'mobelliste' && (isMobile ? (
           <div style={{
             position: 'fixed' as any, top: 0, left: 0, bottom: 0, width: PANEL_W,
             background: '#211e17', borderRight: '1px solid #3a342a',
@@ -744,7 +760,7 @@ export default function App() {
           <div style={{ width: PANEL_W, background: '#211e17', borderRight: '1px solid #3a342a', display: 'flex', flexDirection: 'column', overflow: 'hidden', flexShrink: 0 }}>
             <LeftPanelContent />
           </div>
-        )}
+        ))}
 
         {/* ── CANVAS / MAIN AREA ── */}
         {view === 'plan' && (
@@ -752,10 +768,11 @@ export default function App() {
             <div style={{ marginBottom: 10, fontSize: 10, letterSpacing: 2, color: '#4a3a28', textTransform: 'uppercase' as any }}>
               1 rute = 1 m &nbsp;·&nbsp; {floorItems.length} møbel{floorItems.length !== 1 ? 'er' : ''} plassert
             </div>
-            <svg ref={svgRef} width={floor.width * SCALE + 80} height={floor.height * SCALE + 80}
+            <svg ref={svgRef}
+              viewBox={`0 0 ${floor.width * SCALE + 80} ${floor.height * SCALE + 80}`}
               onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseLeave={onMouseUp}
               onClick={() => setSelected(null)}
-              style={{ cursor: dragging ? 'grabbing' : 'default', userSelect: 'none', display: 'block' }}>
+              style={{ width: '100%', height: 'auto', cursor: dragging ? 'grabbing' : 'default', userSelect: 'none', display: 'block' }}>
               <defs>
                 <pattern id="g1" width={SCALE} height={SCALE} patternUnits="userSpaceOnUse">
                   <path d={`M ${SCALE} 0 L 0 0 0 ${SCALE}`} fill="none" stroke="#252018" strokeWidth="0.6" />
@@ -1002,6 +1019,68 @@ export default function App() {
                   </div>
                 </div>
               ))
+            )}
+          </div>
+        )}
+
+        {/* ── MØBELLISTE ── */}
+        {view === 'mobelliste' && (
+          <div style={{ flex: 1, overflowY: 'auto', padding: isMobile ? '16px 14px' : '28px 32px', background: '#16140f' }}>
+            {furniture.length === 0 ? (
+              <div style={{ color: '#4a3a28', fontSize: 13, lineHeight: 2 }}>
+                Ingen møbler plassert ennå. Gå til Plantegning og legg til møbler.
+              </div>
+            ) : (
+              <>
+                <div style={{ fontSize: 10, letterSpacing: 3, color: '#7a6a50', textTransform: 'uppercase' as const, marginBottom: 20 }}>
+                  {furniture.length} møbel{furniture.length !== 1 ? 'er' : ''} · {furniture.filter((f: any) => f.price).reduce((s: number, f: any) => s + (parseFloat(f.price) || 0), 0).toLocaleString('nb-NO')} kr totalt
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(auto-fill, minmax(220px, 1fr))', gap: isMobile ? 12 : 18 }}>
+                  {furniture.map((item: any) => {
+                    const itemFloor = FLOORS.find((f) => f.id === item.floorId);
+                    const isFetchingImg = fetchingImageId === item.id;
+                    return (
+                      <div key={item.id} style={{ background: '#211e17', borderRadius: 4, border: '1px solid #2e2a22', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                        {/* Image area */}
+                        <div style={{ width: '100%', aspectRatio: '4/3' as any, background: item.color, overflow: 'hidden', position: 'relative' as const, flexShrink: 0 }}>
+                          {item.imageUrl ? (
+                            <img src={item.imageUrl} alt={item.name}
+                              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                          ) : item.url ? (
+                            <button
+                              onClick={() => fetchItemImage(item.id, item.url)}
+                              disabled={isFetchingImg}
+                              style={{ position: 'absolute' as const, bottom: 8, left: '50%', transform: 'translateX(-50%)', padding: '5px 10px', background: '#1a1812cc', border: '1px solid #3a342a', borderRadius: 3, color: '#9a8a70', fontSize: 10, cursor: 'pointer', whiteSpace: 'nowrap' as const, fontFamily: 'Georgia, serif' }}>
+                              {isFetchingImg ? '…henter' : 'Hent bilde'}
+                            </button>
+                          ) : null}
+                        </div>
+                        {/* Info */}
+                        <div style={{ padding: '12px 14px', flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                          <div style={{ fontSize: 14, color: '#e8dcc8', fontFamily: 'Georgia, serif' }}>{item.name}</div>
+                          <div style={{ fontSize: 11, color: '#6a5a40' }}>
+                            {itemFloor?.name} · {item.width} × {item.height} m
+                          </div>
+                          {item.price && (
+                            <div style={{ fontSize: 15, color: '#c8a96e', marginTop: 2 }}>
+                              {parseFloat(item.price).toLocaleString('nb-NO')} kr
+                            </div>
+                          )}
+                          {item.url && (
+                            <a href={item.url} target="_blank" rel="noreferrer"
+                              style={{ marginTop: 'auto', paddingTop: 8, fontSize: 11, color: '#7a6a50', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}
+                              onMouseEnter={(e) => (e.currentTarget.style.color = '#c8a96e')}
+                              onMouseLeave={(e) => (e.currentTarget.style.color = '#7a6a50')}>
+                              Åpne nettside →
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
             )}
           </div>
         )}

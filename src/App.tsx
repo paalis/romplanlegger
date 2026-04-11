@@ -31,12 +31,12 @@ const FLOORS = [
   {
     id: 3, name: '3. etasje', width: 9, height: 14,
     rooms: [
-      { id: 'takter', name: 'Takterrasse 17m²', x: 0.5, y: 0.2, w: 7.5, h: 3.5, color: '#e8e0d0', dashed: true },
-      { id: 'bod3', name: 'Bod 1m²', x: 6.5, y: 3.7, w: 1.5, h: 1.5, color: '#e0dbd2' },
-      { id: 'stue3', name: 'Stue 15,5m²', x: 0.5, y: 3.7, w: 6, h: 4.5, color: '#f0ede8' },
-      { id: 'trapp3', name: 'Trapp', x: 6.5, y: 5.2, w: 1.5, h: 3, color: '#e4e0da' },
-      { id: 'sov4', name: 'Soverom 8m²', x: 0.5, y: 8.2, w: 3.5, h: 3, color: '#e8edf0' },
-      { id: 'vask', name: 'Vaskerom 4,5m²', x: 4, y: 8.2, w: 2.5, h: 3, color: '#d6eaf8' },
+      { id: 'takter', name: 'Takterrasse 17m²', x: 0.5, y: 0.2, w: 7.5, h: 4, color: '#e8e0d0', dashed: true },
+      { id: 'bod3', name: 'Bod 1m²', x: 6.5, y: 4.2, w: 1.5, h: 1.5, color: '#e0dbd2' },
+      { id: 'stue3', name: 'Stue 15,5m²', x: 0.5, y: 4.2, w: 6, h: 4.5, color: '#f0ede8' },
+      { id: 'trapp3', name: 'Trapp', x: 6.5, y: 5.7, w: 1.5, h: 6, color: '#e4e0da' },
+      { id: 'sov4', name: 'Soverom 8m²', x: 0.5, y: 8.7, w: 3.5, h: 3, color: '#e8edf0' },
+      { id: 'vask', name: 'Vaskerom 4,5m²', x: 4, y: 8.7, w: 2.5, h: 3, color: '#d6eaf8' },
     ],
   },
 ];

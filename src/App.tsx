@@ -881,6 +881,7 @@ export default function App() {
             <div style={{ marginBottom: 10, fontSize: 10, letterSpacing: 2, color: '#4a3a28', textTransform: 'uppercase' as any, fontFamily: 'system-ui, -apple-system, "Segoe UI", sans-serif', fontWeight: 500 }}>
               1 rute = 1 m &nbsp;·&nbsp; {floorItems.length} møbel{floorItems.length !== 1 ? 'er' : ''} plassert
             </div>
+            <div style={{ maxWidth: floor.width * SCALE * 2 + 80, width: '100%' }}>
             <svg ref={svgRef}
               viewBox={`0 0 ${floor.width * SCALE + 80} ${floor.height * SCALE + 80}`}
               onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseLeave={onMouseUp}
@@ -990,6 +991,7 @@ export default function App() {
                 })}
               </g>
             </svg>
+            </div>
           </div>
         )}
 

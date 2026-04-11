@@ -73,7 +73,7 @@ const emptyAltForm = {
   category: 'Sofa', name: '', brand: '', width: '', height: '', depth: '',
   color: '#8B7355', colorName: '', price: '', url: '', material: '', notes: '', imageUrl: '', status: 'vurderer',
 };
-const emptyForm = { name: '', width: '', height: '', url: '', price: '', color: '#8B7355', shape: 'rect', legW: '', legH: '', legCorner: 'bl', imageUrl: '' };
+const emptyForm = { name: '', width: '', height: '', url: '', price: '', color: '#8B7355', shape: 'rect', legW: '', legH: '', legCorner: 'bl', imageUrl: '', category: 'Sofa' };
 
 /* ── shared style helpers ── */
 const inp = (extra: React.CSSProperties = {}): React.CSSProperties => ({
@@ -93,7 +93,7 @@ const sectionTitle: React.CSSProperties = {
 export default function App() {
   const [view, setView] = useState<'plan' | 'alternativer' | 'mobelliste'>('plan');
   const [activeFloor, setActiveFloor] = useState(1);
-  const [furniture, setFurniture] = useState<any[]>([]);
+  const [furniture, setFurniture] = useState<any[]>(() => { try { return JSON.parse(localStorage.getItem('rp_furniture') || '[]'); } catch { return []; } });
   const [selected, setSelected] = useState<number | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(emptyForm);
@@ -101,7 +101,7 @@ export default function App() {
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const svgRef = useRef<SVGSVGElement>(null);
 
-  const [alternatives, setAlternatives] = useState<any[]>([]);
+  const [alternatives, setAlternatives] = useState<any[]>(() => { try { return JSON.parse(localStorage.getItem('rp_alternatives') || '[]'); } catch { return []; } });
   const [showAltForm, setShowAltForm] = useState(false);
   const [altForm, setAltForm] = useState(emptyAltForm);
   const [editingAltId, setEditingAltId] = useState<number | null>(null);
@@ -111,6 +111,8 @@ export default function App() {
   const [scraping, setScraping] = useState(false);
   const [altScraping, setAltScraping] = useState(false);
   const [fetchingImageId, setFetchingImageId] = useState<number | null>(null);
+  const [catalog, setCatalog] = useState<any[]>(() => { try { return JSON.parse(localStorage.getItem('rp_catalog') || '[]'); } catch { return []; } });
+  const [catalogCategory, setCatalogCategory] = useState<string | null>(null);
 
   /* ── responsive ── */
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768);
@@ -125,6 +127,10 @@ export default function App() {
 
   // close drawers when switching view on mobile
   useEffect(() => { setLeftOpen(false); setRightOpen(false); }, [view]);
+
+  useEffect(() => { localStorage.setItem('rp_furniture', JSON.stringify(furniture)); }, [furniture]);
+  useEffect(() => { localStorage.setItem('rp_alternatives', JSON.stringify(alternatives)); }, [alternatives]);
+  useEffect(() => { localStorage.setItem('rp_catalog', JSON.stringify(catalog)); }, [catalog]);
 
   const floor = FLOORS.find((f) => f.id === activeFloor)!;
   const selItem = furniture.find((f) => f.id === selected);
@@ -232,6 +238,57 @@ export default function App() {
   const totalPris = alternatives
     .filter((a) => a.status === 'valgt' && a.price)
     .reduce((s, a) => s + (parseFloat(a.price) || 0), 0);
+
+  const addToCatalog = () => {
+    if (!(form as any).name) return;
+    const item = {
+      id: Date.now(),
+      category: (form as any).category || 'Annet',
+      name: (form as any).name,
+      width: parseFloat((form as any).width) || 1,
+      height: parseFloat((form as any).height) || 1,
+      color: (form as any).color,
+      imageUrl: (form as any).imageUrl || '',
+      url: (form as any).url || '',
+      price: (form as any).price || '',
+      shape: (form as any).shape || 'rect',
+      legW: parseFloat((form as any).legW) || 0,
+      legH: parseFloat((form as any).legH) || 0,
+      legCorner: (form as any).legCorner || 'bl',
+    };
+    setCatalog((prev) => [...prev, item]);
+    setForm(emptyForm);
+    setShowForm(false);
+    if (isMobile) setLeftOpen(false);
+  };
+
+  const addFromCatalog = (item: any) => {
+    setFurniture((prev: any[]) => [
+      ...prev,
+      {
+        id: Date.now(),
+        name: item.name,
+        width: item.width,
+        height: item.height,
+        color: item.color,
+        imageUrl: item.imageUrl || '',
+        url: item.url || '',
+        price: item.price || '',
+        shape: item.shape || 'rect',
+        legW: item.legW || 0,
+        legH: item.legH || 0,
+        legCorner: item.legCorner || 'bl',
+        x: 2, y: 2,
+        floorId: activeFloor,
+        rotation: 0,
+      },
+    ]);
+    setView('plan');
+    setCatalogCategory(null);
+    if (isMobile) setLeftOpen(false);
+  };
+
+  const deleteCatalogItem = (id: number) => setCatalog((prev) => prev.filter((c) => c.id !== id));
 
   const fetchFurnitureInfo = async (url: string, target: 'plan' | 'alt') => {
     if (!url) return;
@@ -351,6 +408,12 @@ export default function App() {
                   </button>
                 </div>
               </div>
+              <div style={{ marginBottom: 10 }}>
+                <label style={lbl}>Kategori</label>
+                <select value={(form as any).category} onChange={(e) => setForm((p) => ({ ...p, category: e.target.value } as any))} style={inp({ appearance: 'none' as any })}>
+                  {ALT_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
               {[
                 { l: 'Navn', k: 'name', p: 'f.eks. Sofa' },
                 { l: 'Bredde (m)', k: 'width', p: '2.2', t: 'number' },
@@ -412,30 +475,70 @@ export default function App() {
                 <input type="color" value={form.color} onChange={(e) => setForm((p) => ({ ...p, color: e.target.value }))}
                   style={{ width: '100%', height: 36, border: '1px solid #3a342a', borderRadius: 3, cursor: 'pointer' }} />
               </div>
-              <button onClick={() => addItem()}
-                style={{ width: '100%', padding: 10, background: '#c8a96e', color: '#1a1812', border: 'none', cursor: 'pointer', fontSize: 13, fontFamily: 'Georgia, serif', borderRadius: 3 }}>
-                Plasser på tegning →
-              </button>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <button onClick={() => addItem()}
+                  style={{ width: '100%', padding: 10, background: '#c8a96e', color: '#1a1812', border: 'none', cursor: 'pointer', fontSize: 13, fontFamily: 'Georgia, serif', borderRadius: 3 }}>
+                  Plasser på tegning →
+                </button>
+                <button onClick={addToCatalog}
+                  style={{ width: '100%', padding: 9, background: 'transparent', color: '#9a8a70', border: '1px solid #3a342a', cursor: 'pointer', fontSize: 12, fontFamily: 'Georgia, serif', borderRadius: 3 }}>
+                  Lagre i møbelarkiv
+                </button>
+              </div>
             </div>
           )}
 
-          <div style={{ padding: '14px 18px 8px' }}>
-            <div style={sectionTitle}>Hurtigvalg</div>
-          </div>
-          <div style={{ overflowY: 'auto', flex: 1, padding: '0 14px 16px', display: 'flex', flexDirection: 'column', gap: 4 }}>
-            {PRESETS.map((p, i) => (
-              <button key={i} onClick={() => addItem(p)}
-                style={{ padding: '9px 12px', background: '#2a2620', border: '1px solid #3a342a', color: '#d8cbb8', cursor: 'pointer', fontSize: 13, fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', fontWeight: 400, textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderRadius: 3, letterSpacing: 0.1 }}
-                onMouseEnter={(e) => (e.currentTarget.style.borderColor = '#c8a96e')}
-                onMouseLeave={(e) => (e.currentTarget.style.borderColor = '#3a342a')}>
-                <span style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-                  <span style={{ width: 10, height: 10, background: p.color, borderRadius: 2, flexShrink: 0 }} />
-                  {p.name}
-                </span>
-                <span style={{ color: '#8a7a60', fontSize: 11, fontVariantNumeric: 'tabular-nums', marginLeft: 8 }}>{p.w}×{p.h}m</span>
-              </button>
-            ))}
-          </div>
+          {!showForm && (
+            <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+              {catalogCategory === null ? (
+                <div style={{ padding: '0 14px 16px' }}>
+                  <div style={{ ...sectionTitle, padding: '14px 4px 8px' }}>Legg til fra arkiv</div>
+                  {ALT_CATEGORIES.map((cat) => {
+                    const count = catalog.filter((c) => c.category === cat).length;
+                    return (
+                      <button key={cat} onClick={() => setCatalogCategory(cat)}
+                        style={{ width: '100%', padding: '10px 12px', marginBottom: 4, background: '#2a2620', border: '1px solid #3a342a', color: '#d8cbb8', cursor: 'pointer', fontSize: 13, fontFamily: 'system-ui, sans-serif', textAlign: 'left', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderRadius: 3 }}
+                        onMouseEnter={(e) => (e.currentTarget.style.borderColor = '#c8a96e')}
+                        onMouseLeave={(e) => (e.currentTarget.style.borderColor = '#3a342a')}>
+                        <span>{cat}</span>
+                        <span style={{ fontSize: 11, color: count > 0 ? '#c8a96e' : '#4a3a28' }}>{count > 0 ? count : '—'}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+                  <div style={{ padding: '12px 14px', borderBottom: '1px solid #2e2a22', display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <button onClick={() => setCatalogCategory(null)}
+                      style={{ background: 'none', border: 'none', color: '#9a8a70', cursor: 'pointer', fontSize: 18, padding: 0, lineHeight: 1 }}>←</button>
+                    <span style={{ fontSize: 12, color: '#c8b898', fontFamily: 'system-ui, sans-serif' }}>{catalogCategory}</span>
+                  </div>
+                  <div style={{ overflowY: 'auto', flex: 1, padding: '8px 14px 16px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {catalog.filter((c) => c.category === catalogCategory).length === 0 ? (
+                      <div style={{ color: '#4a3a28', fontSize: 12, lineHeight: 1.8, padding: '8px 0' }}>
+                        Ingen møbler i denne kategorien.<br />Legg til via «+ Egendefinert møbel».
+                      </div>
+                    ) : (
+                      catalog.filter((c) => c.category === catalogCategory).map((item) => (
+                        <button key={item.id} onClick={() => addFromCatalog(item)}
+                          style={{ padding: '10px 12px', background: '#2a2620', border: '1px solid #3a342a', color: '#d8cbb8', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', gap: 10, borderRadius: 3 }}
+                          onMouseEnter={(e) => (e.currentTarget.style.borderColor = '#c8a96e')}
+                          onMouseLeave={(e) => (e.currentTarget.style.borderColor = '#3a342a')}>
+                          <div style={{ width: 32, height: 32, background: item.color, borderRadius: 3, flexShrink: 0, overflow: 'hidden' }}>
+                            {item.imageUrl && <img src={`/api/image?url=${encodeURIComponent(item.imageUrl)}`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />}
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 12, color: '#e8dcc8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>{item.name}</div>
+                            <div style={{ fontSize: 10, color: '#6a5a40' }}>{item.width}×{item.height}m{item.price ? ` · ${parseFloat(item.price).toLocaleString('nb-NO')} kr` : ''}</div>
+                          </div>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </>
       ) : (
         /* Alternativer: left = form + filters */
@@ -1033,65 +1136,77 @@ export default function App() {
           </div>
         )}
 
-        {/* ── MØBELLISTE ── */}
+        {/* ── MØBELLISTE / KATALOG ── */}
         {view === 'mobelliste' && (
           <div style={{ flex: 1, overflowY: 'auto', padding: isMobile ? '16px 14px' : '28px 32px', background: '#16140f' }}>
-            {furniture.length === 0 ? (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, flexWrap: 'wrap' as const, gap: 10 }}>
+              <div style={{ fontSize: 10, letterSpacing: 3, color: '#7a6a50', textTransform: 'uppercase' as const, fontFamily: 'system-ui, sans-serif', fontWeight: 500 }}>
+                {catalog.length} møbel{catalog.length !== 1 ? 'er' : ''} i arkivet
+              </div>
+            </div>
+            {catalog.length === 0 ? (
               <div style={{ color: '#4a3a28', fontSize: 13, lineHeight: 2 }}>
-                Ingen møbler plassert ennå. Gå til Plantegning og legg til møbler.
+                Arkivet er tomt. Legg til møbler via «Egendefinert møbel» i Plantegning og trykk «Lagre i møbelarkiv».
               </div>
             ) : (
-              <>
-                <div style={{ fontSize: 10, letterSpacing: 3, color: '#7a6a50', textTransform: 'uppercase' as const, marginBottom: 20 }}>
-                  {furniture.length} møbel{furniture.length !== 1 ? 'er' : ''} · {furniture.filter((f: any) => f.price).reduce((s: number, f: any) => s + (parseFloat(f.price) || 0), 0).toLocaleString('nb-NO')} kr totalt
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(auto-fill, minmax(220px, 1fr))', gap: isMobile ? 12 : 18 }}>
-                  {furniture.map((item: any) => {
-                    const itemFloor = FLOORS.find((f) => f.id === item.floorId);
-                    const isFetchingImg = fetchingImageId === item.id;
-                    return (
-                      <div key={item.id} style={{ background: '#211e17', borderRadius: 4, border: '1px solid #2e2a22', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                        {/* Image area */}
-                        <div style={{ width: '100%', aspectRatio: '4/3' as any, background: item.color, overflow: 'hidden', position: 'relative' as const, flexShrink: 0 }}>
-                          {item.imageUrl ? (
-                            <img src={`/api/image?url=${encodeURIComponent(item.imageUrl)}`} alt={item.name}
-                              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                          ) : null}
-                          {item.url && (
-                            <button
-                              onClick={() => fetchItemImage(item.id, item.url)}
-                              disabled={isFetchingImg}
-                              style={{ position: 'absolute' as const, bottom: 8, left: '50%', transform: 'translateX(-50%)', padding: '5px 10px', background: '#1a1812cc', border: '1px solid #3a342a', borderRadius: 3, color: '#9a8a70', fontSize: 10, cursor: 'pointer', whiteSpace: 'nowrap' as const, fontFamily: 'Georgia, serif' }}>
-                              {isFetchingImg ? '…henter' : item.imageUrl ? 'Oppdater bilde' : 'Hent bilde'}
-                            </button>
-                          )}
-                        </div>
-                        {/* Info */}
-                        <div style={{ padding: '12px 14px', flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                          <div style={{ fontSize: 14, color: '#e8dcc8', fontFamily: 'Georgia, serif' }}>{item.name}</div>
-                          <div style={{ fontSize: 11, color: '#6a5a40' }}>
-                            {itemFloor?.name} · {item.width} × {item.height} m
-                          </div>
-                          {item.price && (
-                            <div style={{ fontSize: 15, color: '#c8a96e', marginTop: 2 }}>
-                              {parseFloat(item.price).toLocaleString('nb-NO')} kr
+              ALT_CATEGORIES.filter((cat) => catalog.some((c) => c.category === cat)).map((cat) => {
+                const items = catalog.filter((c) => c.category === cat);
+                return (
+                  <div key={cat} style={{ marginBottom: 32 }}>
+                    <div style={{ fontSize: 10, letterSpacing: 3, color: '#7a6a50', textTransform: 'uppercase' as const, marginBottom: 14, paddingBottom: 6, borderBottom: '1px solid #2a2620', fontFamily: 'system-ui, sans-serif', fontWeight: 500 }}>
+                      {cat} · {items.length}
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(auto-fill, minmax(200px, 1fr))', gap: isMobile ? 10 : 16 }}>
+                      {items.map((item: any) => {
+                        const placedCount = furniture.filter((f: any) => f.url && f.url === item.url || f.name === item.name).length;
+                        const isFetchingImg = fetchingImageId === item.id;
+                        return (
+                          <div key={item.id} style={{ background: '#211e17', borderRadius: 4, border: '1px solid #2e2a22', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                            <div style={{ width: '100%', aspectRatio: '4/3' as any, background: item.color, overflow: 'hidden', position: 'relative' as const, flexShrink: 0 }}>
+                              {item.imageUrl && (
+                                <img src={`/api/image?url=${encodeURIComponent(item.imageUrl)}`} alt={item.name}
+                                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                              )}
+                              {item.url && (
+                                <button onClick={() => fetchItemImage(item.id, item.url)} disabled={isFetchingImg}
+                                  style={{ position: 'absolute' as const, bottom: 6, left: '50%', transform: 'translateX(-50%)', padding: '4px 8px', background: '#1a1812cc', border: '1px solid #3a342a', borderRadius: 3, color: '#9a8a70', fontSize: 10, cursor: 'pointer', whiteSpace: 'nowrap' as const, fontFamily: 'Georgia, serif' }}>
+                                  {isFetchingImg ? '…henter' : item.imageUrl ? 'Oppdater bilde' : 'Hent bilde'}
+                                </button>
+                              )}
+                              {placedCount > 0 && (
+                                <div style={{ position: 'absolute' as const, top: 6, right: 6, background: '#6eaac8cc', borderRadius: 3, padding: '2px 6px', fontSize: 9, color: '#fff', fontFamily: 'system-ui, sans-serif' }}>
+                                  På kart ({placedCount})
+                                </div>
+                              )}
                             </div>
-                          )}
-                          {item.url && (
-                            <a href={item.url} target="_blank" rel="noreferrer"
-                              style={{ marginTop: 'auto', paddingTop: 8, fontSize: 11, color: '#7a6a50', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}
-                              onMouseEnter={(e) => (e.currentTarget.style.color = '#c8a96e')}
-                              onMouseLeave={(e) => (e.currentTarget.style.color = '#7a6a50')}>
-                              Åpne nettside →
-                            </a>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </>
+                            <div style={{ padding: '10px 12px', flex: 1, display: 'flex', flexDirection: 'column', gap: 3 }}>
+                              <div style={{ fontSize: 13, color: '#e8dcc8', fontFamily: 'Georgia, serif' }}>{item.name}</div>
+                              <div style={{ fontSize: 11, color: '#6a5a40' }}>{item.width}×{item.height}m{item.price ? ` · ${parseFloat(item.price).toLocaleString('nb-NO')} kr` : ''}</div>
+                              <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' as const }}>
+                                <button onClick={() => addFromCatalog(item)}
+                                  style={{ flex: 1, padding: '6px 8px', background: '#c8a96e22', border: '1px solid #c8a96e55', color: '#c8a96e', cursor: 'pointer', fontSize: 11, fontFamily: 'Georgia, serif', borderRadius: 3 }}>
+                                  Plasser på kart
+                                </button>
+                                {item.url && (
+                                  <a href={item.url} target="_blank" rel="noreferrer"
+                                    style={{ padding: '6px 8px', border: '1px solid #3a342a', color: '#7a6a50', textDecoration: 'none', fontSize: 11, fontFamily: 'Georgia, serif', borderRadius: 3 }}>
+                                    →
+                                  </a>
+                                )}
+                                <button onClick={() => deleteCatalogItem(item.id)}
+                                  style={{ padding: '6px 8px', background: 'transparent', border: '1px solid #3a2a20', color: '#6a4030', cursor: 'pointer', fontSize: 11, fontFamily: 'Georgia, serif', borderRadius: 3 }}>
+                                  ×
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })
             )}
           </div>
         )}

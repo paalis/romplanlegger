@@ -280,6 +280,8 @@ export default function App() {
       const data = await res.json();
       if (data.imageUrl) {
         setFurniture((prev: any[]) => prev.map((f) => f.id === itemId ? { ...f, imageUrl: data.imageUrl } : f));
+      } else {
+        alert('Fant ikke bilde på siden.');
       }
     } catch {}
     finally { setFetchingImageId(null); }
@@ -374,15 +376,22 @@ export default function App() {
               </div>
               {(form as any).shape === 'l-shape' && (
                 <>
+                  {(!(form as any).legW || !(form as any).legH) && (
+                    <div style={{ marginBottom: 10, padding: '8px 10px', background: '#2a1f10', border: '1px solid #c8a96e44', borderRadius: 3, fontSize: 11, color: '#c8a96e', lineHeight: 1.6 }}>
+                      Fyll inn målene under for å få riktig L-fasong på kartet.
+                    </div>
+                  )}
                   <div style={{ marginBottom: 10 }}>
-                    <label style={lbl}>Sjeselong-bredde (m)</label>
+                    <label style={{ ...lbl, color: !(form as any).legW ? '#c8a96e' : '#9a8a70' }}>Sjeselong-bredde (m) *</label>
                     <input type="number" value={(form as any).legW} placeholder="f.eks. 1.3"
-                      onChange={(e) => setForm((p) => ({ ...p, legW: e.target.value } as any))} style={inp()} />
+                      onChange={(e) => setForm((p) => ({ ...p, legW: e.target.value } as any))}
+                      style={inp(!(form as any).legW ? { borderColor: '#c8a96e55' } : {})} />
                   </div>
                   <div style={{ marginBottom: 10 }}>
-                    <label style={lbl}>Sofadybde uten sjeselong (m)</label>
+                    <label style={{ ...lbl, color: !(form as any).legH ? '#c8a96e' : '#9a8a70' }}>Sofadybde uten sjeselong (m) *</label>
                     <input type="number" value={(form as any).legH} placeholder="f.eks. 0.9"
-                      onChange={(e) => setForm((p) => ({ ...p, legH: e.target.value } as any))} style={inp()} />
+                      onChange={(e) => setForm((p) => ({ ...p, legH: e.target.value } as any))}
+                      style={inp(!(form as any).legH ? { borderColor: '#c8a96e55' } : {})} />
                   </div>
                   <div style={{ marginBottom: 10 }}>
                     <label style={lbl}>Sjeselong-side</label>
@@ -1044,17 +1053,18 @@ export default function App() {
                         {/* Image area */}
                         <div style={{ width: '100%', aspectRatio: '4/3' as any, background: item.color, overflow: 'hidden', position: 'relative' as const, flexShrink: 0 }}>
                           {item.imageUrl ? (
-                            <img src={item.imageUrl} alt={item.name}
+                            <img src={`/api/image?url=${encodeURIComponent(item.imageUrl)}`} alt={item.name}
                               style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                               onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                          ) : item.url ? (
+                          ) : null}
+                          {item.url && (
                             <button
                               onClick={() => fetchItemImage(item.id, item.url)}
                               disabled={isFetchingImg}
                               style={{ position: 'absolute' as const, bottom: 8, left: '50%', transform: 'translateX(-50%)', padding: '5px 10px', background: '#1a1812cc', border: '1px solid #3a342a', borderRadius: 3, color: '#9a8a70', fontSize: 10, cursor: 'pointer', whiteSpace: 'nowrap' as const, fontFamily: 'Georgia, serif' }}>
-                              {isFetchingImg ? '…henter' : 'Hent bilde'}
+                              {isFetchingImg ? '…henter' : item.imageUrl ? 'Oppdater bilde' : 'Hent bilde'}
                             </button>
-                          ) : null}
+                          )}
                         </div>
                         {/* Info */}
                         <div style={{ padding: '12px 14px', flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>

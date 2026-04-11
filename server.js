@@ -54,14 +54,18 @@ app.get('/api/scrape', async (req, res) => {
     }
 
     // 3. Dimensjoner fra HTML (prøver måltabeller/lister, faller tilbake til all tekst)
+    const measureText = $(
+      '[class*="measurement"], [class*="dimension"], [class*="technical-spec"], [class*="product-detail"], dl, table'
+    ).text()
+    const bodyText = $('body').text()
     if (!result.width || !result.depth) {
-      const measureText = $(
-        '[class*="measurement"], [class*="dimension"], [class*="technical-spec"], [class*="product-detail"], dl, table'
-      ).text()
-      extractDimensions(measureText || $('body').text(), result)
+      extractDimensions(measureText || bodyText, result)
     }
 
-    // 4. Rydd opp i navn (fjern butikknavn etter bindestrek/pipe)
+    // 4. Detekter L-form (sjeselong, chaiselong osv.)
+    extractLShape((result.name || '') + ' ' + (measureText || bodyText), result)
+
+    // 5. Rydd opp i navn (fjern butikknavn etter bindestrek/pipe)
     if (result.name) {
       result.name = result.name
         .replace(/\s*[-–|]\s*(IKEA\.com|IKEA|Skeidar|Bohus|Bolia|Ilva|Kid|Netthem|Møbelringen|Living).*/i, '')
@@ -78,6 +82,50 @@ app.get('/api/scrape', async (req, res) => {
     res.status(500).json({ error: err.message || 'Klarte ikke hente info fra siden' })
   }
 })
+
+function extractLShape(text, result) {
+  const clean = text.replace(/\s+/g, ' ')
+  if (!/sjeselong|chaiselong|chaise\s*lounge|hjørnesofa/i.test(clean)) return
+
+  result.shape = 'l-shape'
+
+  const cm = (s) => Math.round((parseFloat(s.replace(',', '.')) / 100) * 100) / 100
+  const tryMatch = (patterns) => {
+    for (const p of patterns) {
+      const m = new RegExp(p, 'gi').exec(clean)
+      if (m) return cm(m[1])
+    }
+    return null
+  }
+
+  // Sjeselong-bredde (legW)
+  result.legW ??= tryMatch([
+    'bredde\\s*sjeselong[:\\s]+([\\d][\\d.,]*)\\s*cm',
+    'sjeselong[\\s-]*bredde[:\\s]+([\\d][\\d.,]*)\\s*cm',
+    'lengde\\s*sjeselong[:\\s]+([\\d][\\d.,]*)\\s*cm',
+    'bredde\\s*chaiselong[:\\s]+([\\d][\\d.,]*)\\s*cm',
+    'chaise[\\s-]*bredde[:\\s]+([\\d][\\d.,]*)\\s*cm',
+  ])
+
+  // Sofadybde uten sjeselong (legH)
+  result.legH ??= tryMatch([
+    'dybde\\s*sofa[:\\s]+([\\d][\\d.,]*)\\s*cm',
+    'sofa[\\s-]*dybde[:\\s]+([\\d][\\d.,]*)\\s*cm',
+    'dybde\\s*u\\.?\\s*sjeselong[:\\s]+([\\d][\\d.,]*)\\s*cm',
+    'dybde\\s*uten\\s*sjeselong[:\\s]+([\\d][\\d.,]*)\\s*cm',
+  ])
+
+  // Fallback: "Dybde: 90/163 cm"-mønster
+  if (!result.legH) {
+    const slash = /dybde[:\s]+(\d+[\.,]?\d*)\s*\/\s*(\d+[\.,]?\d*)\s*cm/gi.exec(clean)
+    if (slash) {
+      const d1 = parseFloat(slash[1].replace(',', '.'))
+      const d2 = parseFloat(slash[2].replace(',', '.'))
+      result.depth = Math.max(d1, d2) / 100
+      result.legH = Math.min(d1, d2) / 100
+    }
+  }
+}
 
 function extractDimensions(text, result) {
   const clean = text.replace(/\s+/g, ' ')

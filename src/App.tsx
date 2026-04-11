@@ -243,7 +243,12 @@ export default function App() {
           width: data.width != null ? String(data.width) : prev.width,
           height: data.depth != null ? String(data.depth) : prev.height,
           price: data.price != null ? String(data.price) : prev.price,
-        }));
+          ...(data.shape === 'l-shape' && {
+            shape: 'l-shape',
+            legW: data.legW != null ? String(data.legW) : prev.legW,
+            legH: data.legH != null ? String(data.legH) : prev.legH,
+          }),
+        } as any));
       } else {
         setAltForm((prev) => ({
           ...prev,

@@ -42,6 +42,8 @@ const FLOORS = [
 
 const PRESETS = [
   { name: 'Sofa (3-seter)', w: 2.2, h: 0.9, color: '#8B7355' },
+  { name: 'Sofa m/sjeselong (H)', w: 2.6, h: 1.5, color: '#8B7355', shape: 'l-shape', legW: 1.3, legH: 0.9, legCorner: 'bl' },
+  { name: 'Sofa m/sjeselong (V)', w: 2.6, h: 1.5, color: '#8B7355', shape: 'l-shape', legW: 1.3, legH: 0.9, legCorner: 'br' },
   { name: 'Sofa (2-seter)', w: 1.6, h: 0.85, color: '#9B8060' },
   { name: 'Sofabord', w: 1.2, h: 0.6, color: '#A0845C' },
   { name: 'Spisebord', w: 1.6, h: 0.9, color: '#7A6548' },
@@ -71,7 +73,7 @@ const emptyAltForm = {
   category: 'Sofa', name: '', brand: '', width: '', height: '', depth: '',
   color: '#8B7355', colorName: '', price: '', url: '', material: '', notes: '', imageUrl: '', status: 'vurderer',
 };
-const emptyForm = { name: '', width: '', height: '', url: '', price: '', color: '#8B7355' };
+const emptyForm = { name: '', width: '', height: '', url: '', price: '', color: '#8B7355', shape: 'rect', legW: '', legH: '', legCorner: 'bl' };
 
 /* ── shared style helpers ── */
 const inp = (extra: React.CSSProperties = {}): React.CSSProperties => ({
@@ -154,8 +156,8 @@ export default function App() {
 
   const addItem = (preset: any = null) => {
     const base = preset
-      ? { name: preset.name, width: preset.w, height: preset.h, color: preset.color }
-      : { name: form.name, width: parseFloat(form.width), height: parseFloat(form.height), color: form.color };
+      ? { name: preset.name, width: preset.w, height: preset.h, color: preset.color, shape: preset.shape || 'rect', legW: preset.legW || 0, legH: preset.legH || 0, legCorner: preset.legCorner || 'bl' }
+      : { name: form.name, width: parseFloat(form.width), height: parseFloat(form.height), color: form.color, shape: form.shape, legW: parseFloat(form.legW) || 0, legH: parseFloat(form.legH) || 0, legCorner: form.legCorner };
     if (!base.name || !base.width || !base.height) return;
     setFurniture((prev) => [
       ...prev,
@@ -338,6 +340,42 @@ export default function App() {
                     style={inp()} />
                 </div>
               ))}
+              <div style={{ marginBottom: 10 }}>
+                <label style={lbl}>Form</label>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {[{ v: 'rect', l: 'Rektangel' }, { v: 'l-shape', l: 'L-form (sjeselong)' }].map(({ v, l }) => (
+                    <button key={v} onClick={() => setForm((p) => ({ ...p, shape: v }))}
+                      style={{ flex: 1, padding: '7px 4px', fontSize: 11, fontFamily: 'Georgia, serif', borderRadius: 3, cursor: 'pointer', border: `1px solid ${(form as any).shape === v ? '#c8a96e' : '#3a342a'}`, background: (form as any).shape === v ? '#c8a96e22' : 'transparent', color: (form as any).shape === v ? '#c8a96e' : '#9a8a70' }}>
+                      {l}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {(form as any).shape === 'l-shape' && (
+                <>
+                  <div style={{ marginBottom: 10 }}>
+                    <label style={lbl}>Sjeselong-bredde (m)</label>
+                    <input type="number" value={(form as any).legW} placeholder="f.eks. 1.3"
+                      onChange={(e) => setForm((p) => ({ ...p, legW: e.target.value } as any))} style={inp()} />
+                  </div>
+                  <div style={{ marginBottom: 10 }}>
+                    <label style={lbl}>Sofadybde uten sjeselong (m)</label>
+                    <input type="number" value={(form as any).legH} placeholder="f.eks. 0.9"
+                      onChange={(e) => setForm((p) => ({ ...p, legH: e.target.value } as any))} style={inp()} />
+                  </div>
+                  <div style={{ marginBottom: 10 }}>
+                    <label style={lbl}>Sjeselong-side</label>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      {[{ v: 'bl', l: 'Høyre' }, { v: 'br', l: 'Venstre' }].map(({ v, l }) => (
+                        <button key={v} onClick={() => setForm((p) => ({ ...p, legCorner: v } as any))}
+                          style={{ flex: 1, padding: '7px', fontSize: 11, fontFamily: 'Georgia, serif', borderRadius: 3, cursor: 'pointer', border: `1px solid ${(form as any).legCorner === v ? '#c8a96e' : '#3a342a'}`, background: (form as any).legCorner === v ? '#c8a96e22' : 'transparent', color: (form as any).legCorner === v ? '#c8a96e' : '#9a8a70' }}>
+                          {l}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
               <div style={{ marginBottom: 12 }}>
                 <label style={lbl}>Farge</label>
                 <input type="color" value={form.color} onChange={(e) => setForm((p) => ({ ...p, color: e.target.value }))}
@@ -767,20 +805,36 @@ export default function App() {
                 {floorItems.map((item) => {
                   const isSel = selected === item.id;
                   const rot = item.rotation || 0;
+                  const sx = item.x * SCALE;
+                  const sy = item.y * SCALE;
                   const cx = (item.x + item.width / 2) * SCALE;
                   const cy = (item.y + item.height / 2) * SCALE;
                   const fw = item.width * SCALE;
                   const fh = item.height * SCALE;
+
+                  const isL = item.shape === 'l-shape' && item.legW > 0 && item.legH > 0;
+                  const nw = isL ? (item.width - item.legW) * SCALE : 0;
+                  const nh = isL ? (item.height - item.legH) * SCALE : 0;
+                  const lc = item.legCorner || 'bl';
+                  const lPts = isL ? {
+                    bl: `${sx},${sy} ${sx+fw},${sy} ${sx+fw},${sy+fh} ${sx+nw},${sy+fh} ${sx+nw},${sy+fh-nh} ${sx},${sy+fh-nh}`,
+                    br: `${sx},${sy} ${sx+fw},${sy} ${sx+fw},${sy+fh-nh} ${sx+fw-nw},${sy+fh-nh} ${sx+fw-nw},${sy+fh} ${sx},${sy+fh}`,
+                    tl: `${sx+nw},${sy} ${sx+fw},${sy} ${sx+fw},${sy+fh} ${sx},${sy+fh} ${sx},${sy+nh} ${sx+nw},${sy+nh}`,
+                    tr: `${sx},${sy} ${sx+fw-nw},${sy} ${sx+fw-nw},${sy+nh} ${sx+fw},${sy+nh} ${sx+fw},${sy+fh} ${sx},${sy+fh}`,
+                  }[lc as 'bl'|'br'|'tl'|'tr'] : '';
+                  const shapeProps = { fill: item.color, fillOpacity: 0.9, stroke: isSel ? '#c8a96e' : '#4a3820', strokeWidth: isSel ? 2.5 : 1.5 };
+
                   return (
                     <g key={item.id} transform={`rotate(${rot}, ${cx}, ${cy})`}
                       onMouseDown={(e) => startDrag(e, item)}
                       onClick={(e) => { e.stopPropagation(); setSelected(item.id); if (isMobile) setRightOpen(true); }}
                       style={{ cursor: 'grab' }}>
-                      <rect x={item.x * SCALE} y={item.y * SCALE} width={fw} height={fh}
-                        fill={item.color} fillOpacity={0.9}
-                        stroke={isSel ? '#c8a96e' : '#4a3820'} strokeWidth={isSel ? 2.5 : 1.5} rx={2} />
+                      {isL
+                        ? <polygon points={lPts} {...shapeProps} />
+                        : <rect x={sx} y={sy} width={fw} height={fh} {...shapeProps} rx={2} />
+                      }
                       {isSel && (
-                        <rect x={item.x * SCALE - 3} y={item.y * SCALE - 3} width={fw + 6} height={fh + 6}
+                        <rect x={sx - 3} y={sy - 3} width={fw + 6} height={fh + 6}
                           fill="none" stroke="#c8a96e" strokeWidth={1} strokeDasharray="5 3" opacity={0.5} rx={3} />
                       )}
                       {fw > 28 && (

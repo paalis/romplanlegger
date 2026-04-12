@@ -220,7 +220,7 @@ export default function App() {
       setFurniture((prev) =>
         prev.map((f) =>
           f.id === dragging
-            ? { ...f, x: Math.max(0, (p.x - dragOffset.x) / SCALE), y: Math.max(0, (p.y - dragOffset.y) / SCALE) }
+            ? { ...f, x: (p.x - dragOffset.x) / SCALE, y: (p.y - dragOffset.y) / SCALE }
             : f
         )
       );

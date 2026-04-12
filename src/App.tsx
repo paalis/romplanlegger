@@ -14,7 +14,10 @@ const FLOORS = [
         x: 0, y: 0, w: 5.0, h: 5.0,
         color: '#e8e0d0', dashed: true },
       { id: 'stue1', name: 'Stue 35m²',
-        x: 0, y: 5.0, w: 5.0, h: 7.0,
+        x: 0, y: 5.0, w: 5.0, h: 6.35,
+        color: '#f0ede8' },
+      { id: 'stue1_ext', name: '',
+        x: 3.0, y: 11.35, w: 2.0, h: 0.65,
         color: '#f0ede8' },
       { id: 'trapp1', name: 'Trapp',
         x: 4, y: 8, w: 1, h: 2,
@@ -23,7 +26,7 @@ const FLOORS = [
         x: 4, y: 10, w: 1, h: 2,
         color: '#e0dbd2' },
       { id: 'kjokken', name: 'Kjøkken 8m²',
-        x: 0, y: 11.35, w: 3, h: 2.9,
+        x: 0, y: 11.35, w: 3.0, h: 2.9,
         color: '#e8f0ed' },
       { id: 'entre', name: 'Entré 4,5m²',
         x: 3.0, y: 12.0, w: 2, h: 2.25,
@@ -88,7 +91,6 @@ const FLOORS = [
     ],
   },
 ];
-
 const PRESETS = [
   { name: 'Sofa (3-seter)', w: 2.2, h: 0.9, color: '#8B7355' },
   { name: 'Sofa m/sjeselong (H)', w: 2.6, h: 1.5, color: '#8B7355', shape: 'l-shape', legW: 1.3, legH: 0.9, legCorner: 'bl' },

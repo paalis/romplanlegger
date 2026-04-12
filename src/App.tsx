@@ -59,7 +59,7 @@ const FLOORS = [
         x: 0, y: 7.3, w: 5.0, h: 2.4,
         color: '#e8edf0' },
       { id: 'altan', name: 'Altan 4m²',
-        x: 3.0, y: 9.7, w: 2.0, h: 2.0,
+        x: 3.0, y: 9.7, w: 2.2, h: 1.8,
         color: '#e8e0d0', dashed: true },
     ],
   },

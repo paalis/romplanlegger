@@ -1111,14 +1111,14 @@ export default function App() {
                     tl: `${sx+nw},${sy} ${sx+fw},${sy} ${sx+fw},${sy+fh} ${sx},${sy+fh} ${sx},${sy+nh} ${sx+nw},${sy+nh}`,
                     tr: `${sx},${sy} ${sx+fw-nw},${sy} ${sx+fw-nw},${sy+nh} ${sx+fw},${sy+nh} ${sx+fw},${sy+fh} ${sx},${sy+fh}`,
                   }[lc as 'bl'|'br'|'tl'|'tr'] : '';
-                  // U-form: ytre rektangel minus indre åpning (åpning mot topp/front)
+                  // U-form: enkelt polygon som følger ytterlinjene (åpning mot topp)
                   // legW = venstre arm, legW2 = høyre arm (default = legW for symmetrisk)
                   const ulw  = isU ? item.legW * SCALE : 0;
                   const ulw2 = isU ? ((item as any).legW2 ?? item.legW) * SCALE : 0;
                   const ulh  = isU ? item.legH * SCALE : 0;
-                  const uPath = isU
-                    ? `M${sx},${sy} L${sx+fw},${sy} L${sx+fw},${sy+fh} L${sx},${sy+fh} Z ` +
-                      `M${sx+ulw},${sy} L${sx+fw-ulw2},${sy} L${sx+fw-ulw2},${sy+fh-ulh} L${sx+ulw},${sy+fh-ulh} Z`
+                  // 8-punkt polygon: topp-venstre → inn-venstre → bunn-venstre → bunn-høyre → inn-høyre → topp-høyre → ytre bunn-høyre → ytre bunn-venstre
+                  const uPts = isU
+                    ? `${sx},${sy} ${sx+ulw},${sy} ${sx+ulw},${sy+fh-ulh} ${sx+fw-ulw2},${sy+fh-ulh} ${sx+fw-ulw2},${sy} ${sx+fw},${sy} ${sx+fw},${sy+fh} ${sx},${sy+fh}`
                     : '';
                   const shapeProps = { fill: item.color, fillOpacity: 0.9, stroke: isSel ? '#c8a96e' : '#4a3820', strokeWidth: isSel ? 2.5 : 1.5 };
 
@@ -1128,7 +1128,7 @@ export default function App() {
                       onClick={(e) => { e.stopPropagation(); setSelected(item.id); if (isMobile) setRightOpen(true); }}
                       style={{ cursor: 'grab' }}>
                       {isU
-                        ? <path d={uPath} {...shapeProps} fillRule="evenodd" />
+                        ? <polygon points={uPts} {...shapeProps} />
                         : isL
                           ? <polygon points={lPts} {...shapeProps} />
                           : item.shape === 'circle'

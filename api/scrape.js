@@ -15,6 +15,31 @@ const CATEGORY_MAP = [
   { match: /hage|ute|balkong|terrasse|outdoor/i,                              label: 'Utemøbel' },
 ]
 
+const COLOR_MAP = [
+  { match: /svart|black/i,                               hex: '#2a2a2a' },
+  { match: /hvit|white|offwhite|kritt|chalk/i,           hex: '#f0ede8' },
+  { match: /grå|gr[aå]|grey|gray|antrasitt|anthracite/i, hex: '#888884' },
+  { match: /beige|natur|sand|krem|cream/i,               hex: '#c8b898' },
+  { match: /brun|brown|cognac|kaffe|coffee|terrakotta/i, hex: '#8B6B4A' },
+  { match: /blå|blue|navy|petrol|indigo|denim/i,         hex: '#5a7a9e' },
+  { match: /grønn|green|oliv|sage|forest/i,              hex: '#6b8b6b' },
+  { match: /rød|red|bordeaux|rubin|rust/i,               hex: '#9b4444' },
+  { match: /rosa|pink|gammelrosa|dusty.?pink/i,          hex: '#c89898' },
+  { match: /gul|yellow|okker|mustard/i,                  hex: '#c8a94e' },
+  { match: /oransje|orange|terracotta/i,                 hex: '#c8824e' },
+  { match: /lilla|purple|fiolett|lavendel/i,             hex: '#8b6bae' },
+  { match: /turkis|teal|petrol|mint/i,                   hex: '#6b9b9b' },
+  { match: /eik|oak|tre|wood|valnøtt|walnut/i,           hex: '#a07850' },
+]
+
+function mapColor(colorName) {
+  if (!colorName) return null
+  for (const { match, hex } of COLOR_MAP) {
+    if (match.test(colorName)) return hex
+  }
+  return null
+}
+
 function mapCategory(categories) {
   for (const cat of categories) {
     for (const { match, label } of CATEGORY_MAP) {
@@ -83,12 +108,14 @@ async function fetchBohus(url) {
     if (code === 'length'       && numVal)       result.depth   ??= numVal / 100  // senger
     if (code === 'height'       && numVal)       result.height    = numVal / 100
     if (code === 'brand'        && selected?.length) result.brand = selected[0]
-    if (code === 'display_color' && entered)     result.colorName = entered        // "Grå - (Liam grafitt)"
-    if (code === 'color'        && selected?.length) result.colorName ??= selected[0]  // fallback
+    if (code === 'display_color' && entered)         result.colorName = entered
+    if (code === 'color'        && selected?.length) result.colorName ??= selected[0]
 
     // Sjeselong-spesifikke mål
-    if (code === 'sofas_depth2' && numVal) result.legH = numVal / 100  // total dybde
+    if (code === 'sofas_depth2' && numVal) result.legH = numVal / 100
   }
+
+  if (result.colorName) result.colorHex = mapColor(result.colorName)
 
   // Detekter L-form
   if (/sjeselong|chaiselong|hjørnesofa/i.test(result.name)) {

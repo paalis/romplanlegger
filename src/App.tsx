@@ -409,6 +409,7 @@ export default function App() {
           height: data.depth != null ? String(data.depth) : prev.height,
           price: data.price != null ? String(data.price) : prev.price,
           imageUrl: data.imageUrl || (prev as any).imageUrl || '',
+          ...((data as any).colorHex && { color: (data as any).colorHex }),
           ...((data as any).category && { category: (data as any).category }),
           ...(data.shape === 'l-shape' && {
             shape: 'l-shape',
@@ -427,6 +428,7 @@ export default function App() {
           price: data.price != null ? String(data.price) : prev.price,
           imageUrl: data.imageUrl || prev.imageUrl,
           colorName: data.colorName || prev.colorName,
+          ...((data as any).colorHex && { color: (data as any).colorHex }),
           category: data.category || prev.category,
         }));
       }

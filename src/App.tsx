@@ -246,12 +246,12 @@ export default function App() {
 
   const addItem = (preset: any = null) => {
     const base = preset
-      ? { name: preset.name, width: preset.w, height: preset.h, color: preset.color, shape: preset.shape || 'rect', legW: preset.legW || 0, legH: preset.legH || 0, legCorner: preset.legCorner || 'bl' }
-      : { name: form.name, width: parseFloat(form.width), height: parseFloat(form.height), color: form.color, shape: form.shape, legW: parseFloat(form.legW) || 0, legH: parseFloat(form.legH) || 0, legCorner: form.legCorner };
+      ? { name: preset.name, category: preset.category || '', width: preset.w, height: preset.h, color: preset.color, shape: preset.shape || 'rect', legW: preset.legW || 0, legH: preset.legH || 0, legCorner: preset.legCorner || 'bl' }
+      : { name: form.name, category: (form as any).category || '', width: parseFloat(form.width), height: parseFloat(form.height), color: form.color, shape: form.shape, legW: parseFloat(form.legW) || 0, legH: parseFloat(form.legH) || 0, legCorner: form.legCorner };
     if (!base.name || !base.width || !base.height) return;
     setFurniture((prev) => [
       ...prev,
-      { id: Date.now(), ...base, category: (form as any).category || '', url: form.url, price: form.price, imageUrl: (form as any).imageUrl || '', x: 2, y: 2, floorId: activeFloor, rotation: 0 },
+      { id: Date.now(), ...base, url: form.url, price: form.price, imageUrl: (form as any).imageUrl || '', x: 2, y: 2, floorId: activeFloor, rotation: 0 },
     ]);
     if (!preset) {
       // Lagre automatisk i møbelarkivet
@@ -285,6 +285,7 @@ export default function App() {
       {
         id: Date.now(),
         name: alt.brand ? `${alt.brand} ${alt.name}` : alt.name,
+        category: alt.category || '',
         width: w, height: h, color: alt.color,
         url: alt.url, price: alt.price,
         x: 2, y: 2, floorId: activeFloor, rotation: 0,
@@ -392,6 +393,7 @@ export default function App() {
       {
         id: Date.now(),
         name: item.name,
+        category: item.category || '',
         width: item.width,
         height: item.height,
         color: item.color,

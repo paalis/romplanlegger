@@ -253,7 +253,27 @@ export default function App() {
       ...prev,
       { id: Date.now(), ...base, url: form.url, price: form.price, imageUrl: (form as any).imageUrl || '', x: 2, y: 2, floorId: activeFloor, rotation: 0 },
     ]);
-    if (!preset) { setForm(emptyForm); setShowForm(false); }
+    if (!preset) {
+      // Lagre automatisk i møbelarkivet
+      const catalogItem = {
+        id: Date.now() + 1,
+        category: (form as any).category || 'Annet',
+        name: form.name,
+        width: parseFloat(form.width) || 1,
+        height: parseFloat(form.height) || 1,
+        color: form.color,
+        imageUrl: (form as any).imageUrl || '',
+        url: form.url || '',
+        price: form.price || '',
+        shape: form.shape || 'rect',
+        legW: parseFloat(form.legW) || 0,
+        legH: parseFloat(form.legH) || 0,
+        legCorner: form.legCorner || 'bl',
+      };
+      setCatalog((prev) => [...prev, catalogItem]);
+      setForm(emptyForm);
+      setShowForm(false);
+    }
     if (isMobile) setLeftOpen(false);
   };
 

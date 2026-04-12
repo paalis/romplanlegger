@@ -120,8 +120,9 @@ async function fetchBohus(url) {
   const sofasDepth2   = attrs['sofas_depth2']    // total dybde inkl. sjeselong/hjørne (cm)
   const sofasSitdepth = attrs['sofas_sitdepth']  // sittedybde (cm)
   const sofasSetup    = (attrs['sofas_setup_sel']?.[0] || '').toLowerCase()
-  // legCorner: 'bl' = høyre oppsett, 'br' = venstre oppsett
-  const legCorner = sofasSetup.includes('venstre') ? 'br' : 'bl'
+  // Bohus "Høyre" = sjeselong til høyre når du sitter = til VENSTRE fra betrakters perspektiv → 'br'
+  // Bohus "Venstre" = sjeselong til venstre når du sitter = til HØYRE fra betrakters perspektiv → 'bl'
+  const legCorner = sofasSetup.includes('høyre') ? 'br' : 'bl'
 
   // Detekter rundbord/oval
   if (/rundbord|rund.?bord|ovalt.?bord|oval.?bord/i.test(result.name)) {
@@ -151,9 +152,8 @@ async function fetchBohus(url) {
 
       // For hjørnesofa: armbredde = totalDepth (armen er like bred som den er dyp)
       // For vanlig sjeselong: armbredde = sitdepth * 2
-      const isKorner = /hjørnesofa/i.test(composition) || /hjørnesofa/i.test(result.name)
       result.legH = bodyDepth
-      result.legW = isKorner ? totalDepth : (sofasSitdepth ?? 60) * 2 / 100
+      result.legW = (sofasSitdepth ?? 60) * 2 / 100
     }
   }
 

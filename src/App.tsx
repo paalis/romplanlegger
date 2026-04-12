@@ -71,7 +71,7 @@ const FLOORS = [
         x: 0, y: 0, w: 5.0, h: 3.4,
         color: '#e8e0d0', dashed: true },
       { id: 'stue3', name: 'Stue 15,5m²',
-        x: 0, y: 3.4, w: 4.3, h: 4.7,
+        x: 0, y: 3.4, w: 4, h: 4.7,
         color: '#f0ede8' },
       { id: 'bod3', name: 'Bod 1m²',
         x: 4, y: 3.4, w: 1, h: 1.4,

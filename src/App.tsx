@@ -37,24 +37,29 @@ const FLOORS = [
     ],
   },
 
- { id: 'sov1', name: 'Soverom 13m²',
-  x: 0, y: 0, w: 3.25, h: 4.0, color: '#e8edf0' },
-
-{ id: 'sov2', name: 'Soverom 7m²',
-  x: 3.25, y: 0, w: 1.75, h: 4.0, color: '#e8edf0' },
-
-{ id: 'bad', name: 'Bad 7,5m²',
-  x: 0, y: 4.0, w: 3.25, h: 2.31, color: '#d6eaf8' },
-
-{ id: 'gang2', name: 'Gang M/trapp 8,5m²',
-  x: 3.25, y: 4.0, w: 1.75, h: 2.31, color: '#f0ede8' },
-
-{ id: 'sov3', name: 'Soverom 12m²',
-  x: 0, y: 6.31, w: 5.0, h: 2.4, color: '#e8edf0' },
-
-{ id: 'altan', name: 'Altan 4m²',
-  x: 3.0, y: 8.71, w: 2.0, h: 2.0, color: '#e8e0d0', dashed: true },
-
+  {
+    id: 2, name: '2. etasje', width: 7, height: 15,
+    rooms: [
+      { id: 'sov1', name: 'Soverom 13m²',
+        x: 0, y: 0, w: 3.25, h: 4.0,
+        color: '#e8edf0' },
+      { id: 'sov2', name: 'Soverom 7m²',
+        x: 3.25, y: 0, w: 1.75, h: 3.0,
+        color: '#e8edf0' },
+      { id: 'bad', name: 'Bad 7,5m²',
+        x: 0, y: 4.0, w: 3.25, h: 2.31,
+        color: '#d6eaf8' },
+      { id: 'gang2', name: 'Gang M/trapp 8,5m²',
+        x: 3.25, y: 4.0, w: 1.75, h: 3.31,
+        color: '#f0ede8' },
+      { id: 'sov3', name: 'Soverom 12m²',
+        x: 0, y: 6.31, w: 5.0, h: 2.4,
+        color: '#e8edf0' },
+      { id: 'altan', name: 'Altan 4m²',
+        x: 3.0, y: 8.71, w: 2.0, h: 2.0,
+        color: '#e8e0d0', dashed: true },
+    ],
+  },
 
   {
     id: 3, name: '3. etasje', width: 7, height: 12,
@@ -80,7 +85,6 @@ const FLOORS = [
     ],
   },
 ];
-
 
 const PRESETS = [
   { name: 'Sofa (3-seter)', w: 2.2, h: 0.9, color: '#8B7355' },

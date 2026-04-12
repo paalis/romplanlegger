@@ -96,26 +96,29 @@ async function fetchBohus(url) {
   const categories = (item.categories || []).map((c) => c.name)
   result.category = mapCategory(categories)
 
+  // Samle alle numeriske og valgte attributter
+  const attrs = {}
   for (const attr of item.custom_attributes || []) {
     const code = attr.attribute_metadata?.code
     const entered = attr.entered_attribute_value?.value
     const selected = attr.selected_attribute_options?.attribute_option?.map((o) => o.label)
-
-    const numVal = entered != null ? parseFloat(entered) : null
-
-    if (code === 'width'        && numVal)       result.width     = numVal / 100
-    if (code === 'depth'        && numVal)       result.depth     = numVal / 100
-    if (code === 'length'       && numVal)       result.depth   ??= numVal / 100  // senger
-    if (code === 'height'       && numVal)       result.height    = numVal / 100
-    if (code === 'brand'        && selected?.length) result.brand = selected[0]
-    if (code === 'display_color' && entered)         result.colorName = entered
-    if (code === 'color'        && selected?.length) result.colorName ??= selected[0]
-
-    // Sjeselong-spesifikke mål
-    if (code === 'sofas_depth2' && numVal) result.legH = numVal / 100
+    const numVal = entered != null && !isNaN(parseFloat(entered)) ? parseFloat(entered) : null
+    if (numVal !== null) attrs[code] = numVal
+    if (selected?.length) attrs[code + '_sel'] = selected
+    if (entered && numVal === null) attrs[code + '_str'] = entered
   }
 
+  result.width  = (attrs['width']  ?? 0) / 100 || undefined
+  result.depth  = (attrs['depth']  ?? attrs['length'] ?? 0) / 100 || undefined
+  result.height = (attrs['height'] ?? 0) / 100 || undefined
+  result.brand  = attrs['brand_sel']?.[0]
+  result.colorName = attrs['display_color_str'] || attrs['color_sel']?.[0]
+
   if (result.colorName) result.colorHex = mapColor(result.colorName)
+
+  const composition = (attrs['composition_sel']?.[0] || '').toLowerCase()
+  const sofasDepth2   = attrs['sofas_depth2']    // total dybde inkl. sjeselong (cm)
+  const sofasSitdepth = attrs['sofas_sitdepth']  // sittedybde (cm)
 
   // Detekter rundbord/oval
   if (/rundbord|rund.?bord|ovalt.?bord|oval.?bord/i.test(result.name)) {
@@ -123,18 +126,22 @@ async function fetchBohus(url) {
     if (result.width && !result.depth) result.depth = result.width
   }
 
-  // Detekter L-form
-  if (!result.shape && /sjeselong|chaiselong|hjørnesofa/i.test(result.name)) {
+  // Detekter U-form (u-sofa)
+  else if (/u-sofa|u\s*form/i.test(composition) || /u-sofa/i.test(result.name)) {
+    result.shape = 'u-shape'
+    const armWidth = (sofasSitdepth ?? 60) / 100  // armbredde ≈ sittedybde
+    result.legW = armWidth
+    result.legH = armWidth  // bakstykke ≈ samme dybde
+  }
+
+  // Detekter L-form (sjeselong)
+  else if (/sjeselong|chaiselong/i.test(composition) || /sjeselong|chaiselong/i.test(result.name)) {
     result.shape = 'l-shape'
-    // legW = total bredde, legH = sofa-dybde (uten sjeselong)
-    if (!result.legW) result.legW = result.width
-    if (!result.legH) result.legH = result.depth
-    // Sjeselong-dybde er den totale dybden (sofas_depth2)
-    if (result.legH && result.legH === result.depth) {
-      // Har ikke separat sjeselong-dybde, fjern l-shape-flagg
-      delete result.shape
-      delete result.legW
-      delete result.legH
+    if (sofasDepth2) {
+      // Bounding-box dybde = sofas_depth2, sofa-kropp = depth
+      result.depth = sofasDepth2 / 100
+      result.legH  = (attrs['depth'] ?? 0) / 100   // sofa-kropp-dybde
+      result.legW  = (sofasSitdepth ?? 60) * 2 / 100  // estimert sjeselong-bredde
     }
   }
 

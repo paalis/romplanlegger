@@ -434,8 +434,8 @@ export default function App() {
           ...((data as any).colorHex && { color: (data as any).colorHex }),
           ...((data as any).category && { category: (data as any).category }),
           ...(data.shape === 'circle' && { shape: 'circle' }),
-          ...(data.shape === 'l-shape' && {
-            shape: 'l-shape',
+          ...((data.shape === 'l-shape' || data.shape === 'u-shape') && {
+            shape: data.shape,
             legW: data.legW != null ? String(data.legW) : (prev as any).legW,
             legH: data.legH != null ? String(data.legH) : (prev as any).legH,
           }),
@@ -561,7 +561,7 @@ export default function App() {
               <div style={{ marginBottom: 10 }}>
                 <label style={lbl}>Form</label>
                 <div style={{ display: 'flex', gap: 6 }}>
-                  {[{ v: 'rect', l: 'Rektangel' }, { v: 'circle', l: 'Rund/oval' }, { v: 'l-shape', l: 'L-form' }].map(({ v, l }) => (
+                  {[{ v: 'rect', l: 'Rektangel' }, { v: 'circle', l: 'Rund/oval' }, { v: 'l-shape', l: 'L-form' }, { v: 'u-shape', l: 'U-form' }].map(({ v, l }) => (
                     <button key={v} onClick={() => setForm((p) => ({ ...p, shape: v }))}
                       style={{ flex: 1, padding: '7px 4px', fontSize: 11, fontFamily: 'Georgia, serif', borderRadius: 3, cursor: 'pointer', border: `1px solid ${(form as any).shape === v ? '#c8a96e' : '#3a342a'}`, background: (form as any).shape === v ? '#c8a96e22' : 'transparent', color: (form as any).shape === v ? '#c8a96e' : '#9a8a70' }}>
                       {l}
@@ -1096,6 +1096,7 @@ export default function App() {
                   const fh = item.height * SCALE;
 
                   const isL = item.shape === 'l-shape' && item.legW > 0 && item.legH > 0;
+                  const isU = item.shape === 'u-shape' && item.legW > 0 && item.legH > 0;
                   const nw = isL ? (item.width - item.legW) * SCALE : 0;
                   const nh = isL ? (item.height - item.legH) * SCALE : 0;
                   const lc = item.legCorner || 'bl';
@@ -1105,6 +1106,13 @@ export default function App() {
                     tl: `${sx+nw},${sy} ${sx+fw},${sy} ${sx+fw},${sy+fh} ${sx},${sy+fh} ${sx},${sy+nh} ${sx+nw},${sy+nh}`,
                     tr: `${sx},${sy} ${sx+fw-nw},${sy} ${sx+fw-nw},${sy+nh} ${sx+fw},${sy+nh} ${sx+fw},${sy+fh} ${sx},${sy+fh}`,
                   }[lc as 'bl'|'br'|'tl'|'tr'] : '';
+                  // U-form: ytre rektangel minus indre åpning (åpning mot topp/front)
+                  const ulw = isU ? item.legW * SCALE : 0;
+                  const ulh = isU ? item.legH * SCALE : 0;
+                  const uPath = isU
+                    ? `M${sx},${sy} L${sx+fw},${sy} L${sx+fw},${sy+fh} L${sx},${sy+fh} Z ` +
+                      `M${sx+ulw},${sy} L${sx+fw-ulw},${sy} L${sx+fw-ulw},${sy+fh-ulh} L${sx+ulw},${sy+fh-ulh} Z`
+                    : '';
                   const shapeProps = { fill: item.color, fillOpacity: 0.9, stroke: isSel ? '#c8a96e' : '#4a3820', strokeWidth: isSel ? 2.5 : 1.5 };
 
                   return (
@@ -1112,11 +1120,13 @@ export default function App() {
                       onMouseDown={(e) => startDrag(e, item)}
                       onClick={(e) => { e.stopPropagation(); setSelected(item.id); if (isMobile) setRightOpen(true); }}
                       style={{ cursor: 'grab' }}>
-                      {isL
-                        ? <polygon points={lPts} {...shapeProps} />
-                        : item.shape === 'circle'
-                          ? <ellipse cx={cx} cy={cy} rx={fw / 2} ry={fh / 2} {...shapeProps} />
-                          : <rect x={sx} y={sy} width={fw} height={fh} {...shapeProps} rx={2} />
+                      {isU
+                        ? <path d={uPath} {...shapeProps} fillRule="evenodd" />
+                        : isL
+                          ? <polygon points={lPts} {...shapeProps} />
+                          : item.shape === 'circle'
+                            ? <ellipse cx={cx} cy={cy} rx={fw / 2} ry={fh / 2} {...shapeProps} />
+                            : <rect x={sx} y={sy} width={fw} height={fh} {...shapeProps} rx={2} />
                       }
                       {isSel && (
                         <rect x={sx - 3} y={sy - 3} width={fw + 6} height={fh + 6}

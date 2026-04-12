@@ -251,7 +251,7 @@ export default function App() {
     if (!base.name || !base.width || !base.height) return;
     setFurniture((prev) => [
       ...prev,
-      { id: Date.now(), ...base, url: form.url, price: form.price, imageUrl: (form as any).imageUrl || '', x: 2, y: 2, floorId: activeFloor, rotation: 0 },
+      { id: Date.now(), ...base, category: (form as any).category || '', url: form.url, price: form.price, imageUrl: (form as any).imageUrl || '', x: 2, y: 2, floorId: activeFloor, rotation: 0 },
     ]);
     if (!preset) {
       // Lagre automatisk i møbelarkivet

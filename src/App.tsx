@@ -83,7 +83,7 @@ const FLOORS = [
         x: 4, y: 4.8, w: 1, h: 3.3,
         color: '#e4e0da' },
       { id: 'sov4', name: 'Soverom 8m²',
-        x: 0, y: 7.2, w: 2.8, h: 2.9,
+        x: 0, y: 7.4, w: 2.8, h: 2.7,
         color: '#e8edf0' },
       { id: 'vask', name: 'Vaskerom 4,5m²',
         x: 2.8, y: 8.1, w: 2.2, h: 2.0,

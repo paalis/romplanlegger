@@ -26,7 +26,7 @@ const FLOORS = [
         x: 0, y: 11.6, w: 3, h: 2.9,
         color: '#e8f0ed' },
       { id: 'entre', name: 'Entré 4,5m²',
-        x: 3.0, y: 11.75, w: 2, h: 2.25,
+        x: 3.0, y: 12.25, w: 2, h: 2.25,
         color: '#ede8f0' },
       { id: 'terrasse_bak', name: 'Terrasse 4m²',
         x: 3.0, y: 14.5, w: 2.2, h: 1.8,

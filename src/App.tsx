@@ -23,7 +23,7 @@ const FLOORS = [
         x: 4, y: 10, w: 1, h: 2,
         color: '#e0dbd2' },
       { id: 'kjokken', name: 'Kjøkken 8m²',
-        x: 0, y: 11.6, w: 3, h: 2.9,
+        x: 0, y: 11.35, w: 3, h: 2.9,
         color: '#e8f0ed' },
       { id: 'entre', name: 'Entré 4,5m²',
         x: 3.0, y: 12.0, w: 2, h: 2.25,

@@ -26,12 +26,17 @@ function mapCategory(categories) {
 
 // --- Bohus-spesifikk GraphQL-henting ---
 async function fetchBohus(url) {
-  const skuMatch = url.match(/\/(\d{4,7})\/?$/)
-  if (!skuMatch) throw new Error('Fant ikke SKU i Bohus-lenken')
-  const sku = skuMatch[1]
+  // URL kan slutte med numerisk SKU (f.eks. /310820/) eller slug (f.eks. /berlin-kontinentalseng-150x200)
+  const pathSegments = url.replace(/\/$/, '').split('/').filter(Boolean)
+  const lastSegment = pathSegments[pathSegments.length - 1]
+
+  const skuMatch = lastSegment.match(/^(\d{4,7})$/)
+  const filter = skuMatch
+    ? `sku: {eq: "${skuMatch[1]}"}`
+    : `url_key: {eq: "${lastSegment}"}`
 
   const query = `{
-    products(filter: {sku: {eq: "${sku}"}}) {
+    products(filter: {${filter}}) {
       items {
         name
         sku
@@ -75,6 +80,7 @@ async function fetchBohus(url) {
 
     if (code === 'width'  && numVal) result.width  = numVal / 100
     if (code === 'depth'  && numVal) result.depth  = numVal / 100
+    if (code === 'length' && numVal) result.depth  ??= numVal / 100  // senger bruker 'length' for dybde/lengde
     if (code === 'height' && numVal) result.height = numVal / 100
     if (code === 'brand'  && selected?.length) result.brand = selected[0]
     if (code === 'color'  && selected?.length) result.colorName = selected[0]

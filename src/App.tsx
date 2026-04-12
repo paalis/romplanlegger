@@ -246,8 +246,8 @@ export default function App() {
 
   const addItem = (preset: any = null) => {
     const base = preset
-      ? { name: preset.name, category: preset.category || '', width: preset.w, height: preset.h, color: preset.color, shape: preset.shape || 'rect', legW: preset.legW || 0, legH: preset.legH || 0, legCorner: preset.legCorner || 'bl' }
-      : { name: form.name, category: (form as any).category || '', width: parseFloat(form.width), height: parseFloat(form.height), color: form.color, shape: form.shape, legW: parseFloat(form.legW) || 0, legH: parseFloat(form.legH) || 0, legCorner: form.legCorner };
+      ? { name: preset.name, category: preset.category || '', width: preset.w, height: preset.h, color: preset.color, shape: preset.shape || 'rect', legW: preset.legW || 0, legW2: preset.legW2 || 0, legH: preset.legH || 0, legCorner: preset.legCorner || 'bl' }
+      : { name: form.name, category: (form as any).category || '', width: parseFloat(form.width), height: parseFloat(form.height), color: form.color, shape: form.shape, legW: parseFloat(form.legW) || 0, legW2: parseFloat((form as any).legW2) || 0, legH: parseFloat(form.legH) || 0, legCorner: form.legCorner };
     if (!base.name || !base.width || !base.height) return;
     setFurniture((prev) => [
       ...prev,
@@ -267,6 +267,7 @@ export default function App() {
         price: form.price || '',
         shape: form.shape || 'rect',
         legW: parseFloat(form.legW) || 0,
+        legW2: parseFloat((form as any).legW2) || 0,
         legH: parseFloat(form.legH) || 0,
         legCorner: form.legCorner || 'bl',
       };
@@ -354,6 +355,7 @@ export default function App() {
       price: (form as any).price || '',
       shape: (form as any).shape || 'rect',
       legW: parseFloat((form as any).legW) || 0,
+      legW2: parseFloat((form as any).legW2) || 0,
       legH: parseFloat((form as any).legH) || 0,
       legCorner: (form as any).legCorner || 'bl',
     };
@@ -402,6 +404,7 @@ export default function App() {
         price: item.price || '',
         shape: item.shape || 'rect',
         legW: item.legW || 0,
+        legW2: (item as any).legW2 || 0,
         legH: item.legH || 0,
         legCorner: item.legCorner || 'bl',
         x: 2, y: 2,
@@ -437,6 +440,7 @@ export default function App() {
           ...((data.shape === 'l-shape' || data.shape === 'u-shape') && {
             shape: data.shape,
             legW: data.legW != null ? String(data.legW) : (prev as any).legW,
+            legW2: (data as any).legW2 != null ? String((data as any).legW2) : (prev as any).legW2,
             legH: data.legH != null ? String(data.legH) : (prev as any).legH,
             ...((data as any).legCorner && { legCorner: (data as any).legCorner }),
           }),
@@ -1108,11 +1112,13 @@ export default function App() {
                     tr: `${sx},${sy} ${sx+fw-nw},${sy} ${sx+fw-nw},${sy+nh} ${sx+fw},${sy+nh} ${sx+fw},${sy+fh} ${sx},${sy+fh}`,
                   }[lc as 'bl'|'br'|'tl'|'tr'] : '';
                   // U-form: ytre rektangel minus indre åpning (åpning mot topp/front)
-                  const ulw = isU ? item.legW * SCALE : 0;
-                  const ulh = isU ? item.legH * SCALE : 0;
+                  // legW = venstre arm, legW2 = høyre arm (default = legW for symmetrisk)
+                  const ulw  = isU ? item.legW * SCALE : 0;
+                  const ulw2 = isU ? ((item as any).legW2 ?? item.legW) * SCALE : 0;
+                  const ulh  = isU ? item.legH * SCALE : 0;
                   const uPath = isU
                     ? `M${sx},${sy} L${sx+fw},${sy} L${sx+fw},${sy+fh} L${sx},${sy+fh} Z ` +
-                      `M${sx+ulw},${sy} L${sx+fw-ulw},${sy} L${sx+fw-ulw},${sy+fh-ulh} L${sx+ulw},${sy+fh-ulh} Z`
+                      `M${sx+ulw},${sy} L${sx+fw-ulw2},${sy} L${sx+fw-ulw2},${sy+fh-ulh} L${sx+ulw},${sy+fh-ulh} Z`
                     : '';
                   const shapeProps = { fill: item.color, fillOpacity: 0.9, stroke: isSel ? '#c8a96e' : '#4a3820', strokeWidth: isSel ? 2.5 : 1.5 };
 

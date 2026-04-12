@@ -139,21 +139,37 @@ async function fetchBohus(url) {
   }
 
   // Detekter L-form: sjeselong eller hjørnesofa
+  // Hvis også "endeavslutning" → U-form med ulike armlengder
   else if (
     /sjeselong|chaiselong|hjørnesofa/i.test(composition) ||
     /sjeselong|chaiselong|hjørnesofa/i.test(result.name)
   ) {
-    result.shape = 'l-shape'
-    result.legCorner = legCorner
-    if (sofasDepth2) {
-      const bodyDepth = (attrs['depth'] ?? 0) / 100   // sofa-kropp-dybde (kortere arm)
-      const totalDepth = sofasDepth2 / 100             // total bounding-box-dybde (lengre arm)
-      result.depth = totalDepth
+    const hasEndavslutning = /endeavslutning|endavslutning/i.test(result.name)
+    const bodyDepth = (attrs['depth'] ?? 0) / 100
+    const totalDepth = sofasDepth2 ? sofasDepth2 / 100 : bodyDepth
+    const sjeselong = (sofasSitdepth ?? 60) * 2 / 100  // lang arm
+    const endArm    = (sofasSitdepth ?? 60) / 100       // kort arm (endeavslutning)
 
-      // For hjørnesofa: armbredde = totalDepth (armen er like bred som den er dyp)
-      // For vanlig sjeselong: armbredde = sitdepth * 2
+    if (sofasDepth2) result.depth = totalDepth
+
+    if (hasEndavslutning) {
+      // U-form: sjeselong på én side, kort endeavslutning på den andre
+      result.shape = 'u-shape'
       result.legH = bodyDepth
-      result.legW = (sofasSitdepth ?? 60) * 2 / 100
+      // legW = venstre arm (sjeselong-siden), legW2 = høyre arm (endeavslutning)
+      // legCorner 'br' = sjeselong er til venstre for betrakteren
+      if (legCorner === 'br') {
+        result.legW  = sjeselong  // venstre arm = sjeselong
+        result.legW2 = endArm     // høyre arm = endeavslutning
+      } else {
+        result.legW  = endArm     // venstre arm = endeavslutning
+        result.legW2 = sjeselong  // høyre arm = sjeselong
+      }
+    } else {
+      result.shape = 'l-shape'
+      result.legCorner = legCorner
+      result.legH = bodyDepth
+      result.legW = sjeselong
     }
   }
 

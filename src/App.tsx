@@ -409,6 +409,7 @@ export default function App() {
           height: data.depth != null ? String(data.depth) : prev.height,
           price: data.price != null ? String(data.price) : prev.price,
           imageUrl: data.imageUrl || (prev as any).imageUrl || '',
+          ...((data as any).category && { category: (data as any).category }),
           ...(data.shape === 'l-shape' && {
             shape: 'l-shape',
             legW: data.legW != null ? String(data.legW) : (prev as any).legW,
@@ -426,6 +427,7 @@ export default function App() {
           price: data.price != null ? String(data.price) : prev.price,
           imageUrl: data.imageUrl || prev.imageUrl,
           colorName: data.colorName || prev.colorName,
+          category: data.category || prev.category,
         }));
       }
     } catch {

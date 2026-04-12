@@ -1,5 +1,106 @@
 import * as cheerio from 'cheerio'
 
+// Kategorier som samsvarer med app-en sine ALT_CATEGORIES
+const CATEGORY_MAP = [
+  { match: /sofa|sjeselong|chaiselong|hjørnesofa|2.seter|3.seter|4.seter/i, label: 'Sofa' },
+  { match: /stol|lenestol|kontorstoler|sittegruppe/i,                        label: 'Stol' },
+  { match: /bord|spisebord|sofabord|stuebord|skrivebord|sidebord|salongbord/i, label: 'Bord' },
+  { match: /seng|dobbeltseng|enkeltseng|kontinentalseng|boxspring/i,          label: 'Seng' },
+  { match: /skap|garderobe|kommode|dresser/i,                                 label: 'Skap' },
+  { match: /hylle|bokhylle|vegghy/i,                                          label: 'Hylle' },
+  { match: /lampe|belysning|taklampe|gulvlampe|bordlampe|lysekrone/i,         label: 'Belysning' },
+  { match: /kjøkken|kjoekken|kitchen/i,                                       label: 'Kjøkken' },
+  { match: /bad|baderom|bathroom/i,                                           label: 'Bad' },
+  { match: /tv.benk|tv.møbel|tv.bord|mediamøbel/i,                           label: 'TV-møbel' },
+  { match: /hage|ute|balkong|terrasse|outdoor/i,                              label: 'Utemøbel' },
+]
+
+function mapCategory(categories) {
+  for (const cat of categories) {
+    for (const { match, label } of CATEGORY_MAP) {
+      if (match.test(cat)) return label
+    }
+  }
+  return null
+}
+
+// --- Bohus-spesifikk GraphQL-henting ---
+async function fetchBohus(url) {
+  const skuMatch = url.match(/\/(\d{4,7})\/?$/)
+  if (!skuMatch) throw new Error('Fant ikke SKU i Bohus-lenken')
+  const sku = skuMatch[1]
+
+  const query = `{
+    products(filter: {sku: {eq: "${sku}"}}) {
+      items {
+        name
+        sku
+        price_range { minimum_price { regular_price { value } } }
+        image { url }
+        categories { name }
+        custom_attributes {
+          attribute_metadata { code label }
+          entered_attribute_value { value }
+          selected_attribute_options { attribute_option { label } }
+        }
+      }
+    }
+  }`
+
+  const res = await fetch('https://checkout.bohus.no/graphql', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'User-Agent': 'Mozilla/5.0' },
+    body: JSON.stringify({ query }),
+    signal: AbortSignal.timeout(9000),
+  })
+  if (!res.ok) throw new Error(`Bohus GraphQL HTTP ${res.status}`)
+  const json = await res.json()
+  const item = json?.data?.products?.items?.[0]
+  if (!item) throw new Error('Fant ikke produktet på Bohus')
+
+  const result = {}
+  result.name = item.name
+  result.price = Math.round(item.price_range?.minimum_price?.regular_price?.value ?? 0) || undefined
+  result.imageUrl = item.image?.url
+
+  const categories = (item.categories || []).map((c) => c.name)
+  result.category = mapCategory(categories)
+
+  for (const attr of item.custom_attributes || []) {
+    const code = attr.attribute_metadata?.code
+    const entered = attr.entered_attribute_value?.value
+    const selected = attr.selected_attribute_options?.attribute_option?.map((o) => o.label)
+
+    const numVal = entered != null ? parseFloat(entered) : null
+
+    if (code === 'width'  && numVal) result.width  = numVal / 100
+    if (code === 'depth'  && numVal) result.depth  = numVal / 100
+    if (code === 'height' && numVal) result.height = numVal / 100
+    if (code === 'brand'  && selected?.length) result.brand = selected[0]
+    if (code === 'color'  && selected?.length) result.colorName = selected[0]
+
+    // Sjeselong-spesifikke mål
+    if (code === 'sofas_depth2' && numVal) result.legH = numVal / 100  // total dybde
+  }
+
+  // Detekter L-form
+  if (/sjeselong|chaiselong|hjørnesofa/i.test(result.name)) {
+    result.shape = 'l-shape'
+    // legW = total bredde, legH = sofa-dybde (uten sjeselong)
+    if (!result.legW) result.legW = result.width
+    if (!result.legH) result.legH = result.depth
+    // Sjeselong-dybde er den totale dybden (sofas_depth2)
+    if (result.legH && result.legH === result.depth) {
+      // Har ikke separat sjeselong-dybde, fjern l-shape-flagg
+      delete result.shape
+      delete result.legW
+      delete result.legH
+    }
+  }
+
+  return result
+}
+
 export default async function handler(req, res) {
   const { url } = req.query
   if (!url || typeof url !== 'string') {
@@ -7,6 +108,12 @@ export default async function handler(req, res) {
   }
 
   try {
+    // Bohus-spesifikk håndtering via GraphQL
+    if (/bohus\.no/i.test(url)) {
+      const result = await fetchBohus(url)
+      return res.json(result)
+    }
+
     const response = await fetch(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -36,6 +143,10 @@ export default async function handler(req, res) {
         const img = product.image
         result.imageUrl ??= Array.isArray(img) ? img[0] : typeof img === 'string' ? img : img?.url
 
+        // Kategori fra breadcrumb / category
+        const cats = product.category ? [product.category].flat() : []
+        if (!result.category && cats.length) result.category = mapCategory(cats)
+
         if (product.description) extractDimensions(product.description, result)
       } catch {}
     }
@@ -49,7 +160,7 @@ export default async function handler(req, res) {
       if (amount) result.price = parseFloat(amount)
     }
 
-    // 3. Prøv å hente mål fra strukturerte nøkkel/verdi-par i HTML (dt/dd, tabeller, lister)
+    // 3. Prøv å hente mål fra strukturerte nøkkel/verdi-par i HTML
     if (!result.width || !result.depth) {
       extractFromKeyValueElements($, result)
     }
@@ -84,7 +195,6 @@ export default async function handler(req, res) {
   }
 }
 
-// Henter mål fra dt/dd-par og tabellrader der nøkkel og verdi er i separate elementer
 function extractFromKeyValueElements($, result) {
   const cm = (s) => Math.round((parseFloat(String(s).replace(',', '.')) / 100) * 100) / 100
 
@@ -102,7 +212,6 @@ function extractFromKeyValueElements($, result) {
     if (HEIGHT_KEYS.test(trimKey)) result.height ??= v
   }
 
-  // dt/dd-par
   $('dl').each((_, dl) => {
     const children = $(dl).children().toArray()
     for (let i = 0; i < children.length - 1; i++) {
@@ -110,24 +219,16 @@ function extractFromKeyValueElements($, result) {
       if (tag === 'dt') {
         const key = $(children[i]).text().trim()
         const dd = children[i + 1]
-        if (dd?.tagName?.toLowerCase() === 'dd') {
-          trySetDim(key, $(dd).text())
-        }
+        if (dd?.tagName?.toLowerCase() === 'dd') trySetDim(key, $(dd).text())
       }
     }
   })
 
-  // Tabellrader: <tr><td>Nøkkel</td><td>Verdi</td></tr>
   $('tr').each((_, tr) => {
     const cells = $(tr).find('td, th').toArray()
-    if (cells.length >= 2) {
-      const key = $(cells[0]).text().trim()
-      const val = $(cells[1]).text().trim()
-      trySetDim(key, val)
-    }
+    if (cells.length >= 2) trySetDim($(cells[0]).text().trim(), $(cells[1]).text().trim())
   })
 
-  // Liste-elementer som inneholder målinformasjon: <li>Bredde: 120 cm</li>
   $('li, p, span').each((_, el) => {
     const text = $(el).text().trim()
     const m = /^(bredde|dybde|høyde|width|depth|height|bredd|djupet|höjd)[:\s]*(\d+[\.,]?\d*)\s*cm/i.exec(text)
@@ -180,7 +281,6 @@ function extractDimensions(text, result) {
   const clean = text.replace(/\s+/g, ' ')
   const cm = (s) => Math.round((parseFloat(s.replace(',', '.')) / 100) * 100) / 100
 
-  // Format: "200 x 90 x 80 cm" eller "200×90×80cm" (B×D×H)
   if (!result.width || !result.depth || !result.height) {
     const xPat = /(\d+[\.,]?\d*)\s*[x×X]\s*(\d+[\.,]?\d*)\s*[x×X]\s*(\d+[\.,]?\d*)\s*cm/i
     const m = xPat.exec(clean)
@@ -191,7 +291,6 @@ function extractDimensions(text, result) {
     }
   }
 
-  // Format: "B: 120 cm / D: 80 cm / H: 75 cm"
   if (!result.width || !result.depth || !result.height) {
     const bPat = /\bB[:\s]*(\d+[\.,]?\d*)\s*cm/i.exec(clean)
     const dPat = /\bD[:\s]*(\d+[\.,]?\d*)\s*cm/i.exec(clean)

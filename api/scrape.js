@@ -117,8 +117,14 @@ async function fetchBohus(url) {
 
   if (result.colorName) result.colorHex = mapColor(result.colorName)
 
+  // Detekter rundbord/oval
+  if (/rundbord|rund.?bord|ovalt.?bord|oval.?bord/i.test(result.name)) {
+    result.shape = 'circle'
+    if (result.width && !result.depth) result.depth = result.width
+  }
+
   // Detekter L-form
-  if (/sjeselong|chaiselong|hjørnesofa/i.test(result.name)) {
+  if (!result.shape && /sjeselong|chaiselong|hjørnesofa/i.test(result.name)) {
     result.shape = 'l-shape'
     // legW = total bredde, legH = sofa-dybde (uten sjeselong)
     if (!result.legW) result.legW = result.width
@@ -208,9 +214,11 @@ export default async function handler(req, res) {
       extractDimensions(measureText || bodyText, result)
     }
 
-    // 5. Detekter L-form (sjeselong, chaiselong osv.)
+    // 5. Detekter form
     const bodyText = $('body').text()
-    extractLShape((result.name || '') + ' ' + bodyText, result)
+    const shapeText = (result.name || '') + ' ' + bodyText
+    extractLShape(shapeText, result)
+    if (!result.shape) extractCircle(shapeText, result)
 
     // 6. Rydd opp i navn
     if (result.name) {
@@ -359,4 +367,23 @@ function extractDimensions(text, result) {
     'height[:\\s]*([\\d][\\d.,]*)\\s*cm',
     'höjd[:\\s]*([\\d][\\d.,]*)\\s*cm',
   ])
+}
+
+function extractCircle(text, result) {
+  const clean = text.replace(/\s+/g, ' ')
+  if (!/rundbord|rund.?bord|round.?table|oval.?bord|ovalt.?bord|sirkel|diameter|Ø\s*\d/i.test(clean)) return
+
+  result.shape = 'circle'
+
+  // Hent diameter: "Ø 120 cm", "diameter: 120 cm", "diameter 120cm"
+  const cm = (s) => Math.round((parseFloat(s.replace(',', '.')) / 100) * 100) / 100
+  const diam = (
+    /[Øø]\s*(\d+[\.,]?\d*)\s*cm/i.exec(clean) ||
+    /diameter[:\s]*(\d+[\.,]?\d*)\s*cm/i.exec(clean)
+  )
+  if (diam) {
+    const d = cm(diam[1])
+    result.width  ??= d
+    result.depth  ??= d
+  }
 }

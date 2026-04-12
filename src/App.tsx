@@ -433,6 +433,7 @@ export default function App() {
           imageUrl: data.imageUrl || (prev as any).imageUrl || '',
           ...((data as any).colorHex && { color: (data as any).colorHex }),
           ...((data as any).category && { category: (data as any).category }),
+          ...(data.shape === 'circle' && { shape: 'circle' }),
           ...(data.shape === 'l-shape' && {
             shape: 'l-shape',
             legW: data.legW != null ? String(data.legW) : (prev as any).legW,
@@ -560,7 +561,7 @@ export default function App() {
               <div style={{ marginBottom: 10 }}>
                 <label style={lbl}>Form</label>
                 <div style={{ display: 'flex', gap: 6 }}>
-                  {[{ v: 'rect', l: 'Rektangel' }, { v: 'l-shape', l: 'L-form (sjeselong)' }].map(({ v, l }) => (
+                  {[{ v: 'rect', l: 'Rektangel' }, { v: 'circle', l: 'Rund/oval' }, { v: 'l-shape', l: 'L-form' }].map(({ v, l }) => (
                     <button key={v} onClick={() => setForm((p) => ({ ...p, shape: v }))}
                       style={{ flex: 1, padding: '7px 4px', fontSize: 11, fontFamily: 'Georgia, serif', borderRadius: 3, cursor: 'pointer', border: `1px solid ${(form as any).shape === v ? '#c8a96e' : '#3a342a'}`, background: (form as any).shape === v ? '#c8a96e22' : 'transparent', color: (form as any).shape === v ? '#c8a96e' : '#9a8a70' }}>
                       {l}
@@ -1113,7 +1114,9 @@ export default function App() {
                       style={{ cursor: 'grab' }}>
                       {isL
                         ? <polygon points={lPts} {...shapeProps} />
-                        : <rect x={sx} y={sy} width={fw} height={fh} {...shapeProps} rx={2} />
+                        : item.shape === 'circle'
+                          ? <ellipse cx={cx} cy={cy} rx={fw / 2} ry={fh / 2} {...shapeProps} />
+                          : <rect x={sx} y={sy} width={fw} height={fh} {...shapeProps} rx={2} />
                       }
                       {isSel && (
                         <rect x={sx - 3} y={sy - 3} width={fw + 6} height={fh + 6}

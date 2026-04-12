@@ -78,12 +78,13 @@ async function fetchBohus(url) {
 
     const numVal = entered != null ? parseFloat(entered) : null
 
-    if (code === 'width'  && numVal) result.width  = numVal / 100
-    if (code === 'depth'  && numVal) result.depth  = numVal / 100
-    if (code === 'length' && numVal) result.depth  ??= numVal / 100  // senger bruker 'length' for dybde/lengde
-    if (code === 'height' && numVal) result.height = numVal / 100
-    if (code === 'brand'  && selected?.length) result.brand = selected[0]
-    if (code === 'color'  && selected?.length) result.colorName = selected[0]
+    if (code === 'width'        && numVal)       result.width     = numVal / 100
+    if (code === 'depth'        && numVal)       result.depth     = numVal / 100
+    if (code === 'length'       && numVal)       result.depth   ??= numVal / 100  // senger
+    if (code === 'height'       && numVal)       result.height    = numVal / 100
+    if (code === 'brand'        && selected?.length) result.brand = selected[0]
+    if (code === 'display_color' && entered)     result.colorName = entered        // "Grå - (Liam grafitt)"
+    if (code === 'color'        && selected?.length) result.colorName ??= selected[0]  // fallback
 
     // Sjeselong-spesifikke mål
     if (code === 'sofas_depth2' && numVal) result.legH = numVal / 100  // total dybde

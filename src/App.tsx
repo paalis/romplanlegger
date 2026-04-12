@@ -17,7 +17,7 @@ const FLOORS = [
         x: 0, y: 5.0, w: 5.0, h: 7.0,
         color: '#f0ede8' },
       { id: 'trapp1', name: 'Trapp',
-        x: 3.75, y: 9.5, w: 1.25, h: 1.5,
+        x: 3.75, y: 9.5, w: 1.25, h: 2.88,
         color: '#e4e0da' },
       { id: 'tekrom', name: 'Tek.Rom 2m²',
         x: 3.75, y: 11.0, w: 1.25, h: 1.0,

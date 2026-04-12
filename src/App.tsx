@@ -50,7 +50,7 @@ const FLOORS = [
         x: 2.8, y: 0, w: 2.2, h: 3.2,
         color: '#e8edf0' },
       { id: 'gang2', name: 'Gang M/trapp 8,5m²',
-        x: 2.8, y: 3.2, w: 2.2, h: 4.1,
+        x: 2.8, y: 3.2, w: 1.5, h: 4.1,
         color: '#f0ede8' },
       { id: 'trapp2', name: 'Trapp',
         x: 4.3, y: 3.2, w: 0.7, h: 4.1,

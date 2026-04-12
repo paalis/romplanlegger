@@ -53,7 +53,7 @@ const FLOORS = [
         x: 2.8, y: 3.2, w: 1.5, h: 4.1,
         color: '#f0ede8' },
       { id: 'trapp2', name: 'Trapp',
-        x: 4.3, y: 3.2, w: 0.7, h: 4.1,
+        x: 4.3, y: 3.2, w: 1, h: 4.1,
         color: '#e4e0da' },
       { id: 'sov3', name: 'Soverom 12m²',
         x: 0, y: 7.3, w: 5.0, h: 2.4,

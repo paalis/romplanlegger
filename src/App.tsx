@@ -438,6 +438,7 @@ export default function App() {
             shape: data.shape,
             legW: data.legW != null ? String(data.legW) : (prev as any).legW,
             legH: data.legH != null ? String(data.legH) : (prev as any).legH,
+            ...((data as any).legCorner && { legCorner: (data as any).legCorner }),
           }),
         } as any));
       } else {

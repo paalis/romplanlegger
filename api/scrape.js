@@ -117,8 +117,11 @@ async function fetchBohus(url) {
   if (result.colorName) result.colorHex = mapColor(result.colorName)
 
   const composition = (attrs['composition_sel']?.[0] || '').toLowerCase()
-  const sofasDepth2   = attrs['sofas_depth2']    // total dybde inkl. sjeselong (cm)
+  const sofasDepth2   = attrs['sofas_depth2']    // total dybde inkl. sjeselong/hjørne (cm)
   const sofasSitdepth = attrs['sofas_sitdepth']  // sittedybde (cm)
+  const sofasSetup    = (attrs['sofas_setup_sel']?.[0] || '').toLowerCase()
+  // legCorner: 'bl' = høyre oppsett, 'br' = venstre oppsett
+  const legCorner = sofasSetup.includes('venstre') ? 'br' : 'bl'
 
   // Detekter rundbord/oval
   if (/rundbord|rund.?bord|ovalt.?bord|oval.?bord/i.test(result.name)) {
@@ -129,19 +132,28 @@ async function fetchBohus(url) {
   // Detekter U-form (u-sofa)
   else if (/u-sofa|u\s*form/i.test(composition) || /u-sofa/i.test(result.name)) {
     result.shape = 'u-shape'
-    const armWidth = (sofasSitdepth ?? 60) / 100  // armbredde ≈ sittedybde
+    const armWidth = (sofasSitdepth ?? 60) / 100
     result.legW = armWidth
-    result.legH = armWidth  // bakstykke ≈ samme dybde
+    result.legH = armWidth
   }
 
-  // Detekter L-form (sjeselong)
-  else if (/sjeselong|chaiselong/i.test(composition) || /sjeselong|chaiselong/i.test(result.name)) {
+  // Detekter L-form: sjeselong eller hjørnesofa
+  else if (
+    /sjeselong|chaiselong|hjørnesofa/i.test(composition) ||
+    /sjeselong|chaiselong|hjørnesofa/i.test(result.name)
+  ) {
     result.shape = 'l-shape'
+    result.legCorner = legCorner
     if (sofasDepth2) {
-      // Bounding-box dybde = sofas_depth2, sofa-kropp = depth
-      result.depth = sofasDepth2 / 100
-      result.legH  = (attrs['depth'] ?? 0) / 100   // sofa-kropp-dybde
-      result.legW  = (sofasSitdepth ?? 60) * 2 / 100  // estimert sjeselong-bredde
+      const bodyDepth = (attrs['depth'] ?? 0) / 100   // sofa-kropp-dybde (kortere arm)
+      const totalDepth = sofasDepth2 / 100             // total bounding-box-dybde (lengre arm)
+      result.depth = totalDepth
+
+      // For hjørnesofa: armbredde = totalDepth (armen er like bred som den er dyp)
+      // For vanlig sjeselong: armbredde = sitdepth * 2
+      const isKorner = /hjørnesofa/i.test(composition) || /hjørnesofa/i.test(result.name)
+      result.legH = bodyDepth
+      result.legW = isKorner ? totalDepth : (sofasSitdepth ?? 60) * 2 / 100
     }
   }
 

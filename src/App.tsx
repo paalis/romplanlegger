@@ -1118,16 +1118,10 @@ export default function App() {
                           fill="none" stroke="#c8a96e" strokeWidth={1} strokeDasharray="5 3" opacity={0.5} rx={3} />
                       )}
                       {fw > 28 && (
-                        <text x={cx} y={cy - (fh > 24 ? 7 : 0)} textAnchor="middle" dominantBaseline="middle"
-                          fontSize={Math.min(10, fw / Math.max(item.name.length * 0.65, 1))}
+                        <text x={cx} y={cy} textAnchor="middle" dominantBaseline="middle"
+                          fontSize={Math.min(10, fw / Math.max(((item.category as string) || item.name).length * 0.65, 1))}
                           fill="#fff" fillOpacity={0.88} fontFamily="Georgia, serif" pointerEvents="none">
-                          {item.name}
-                        </text>
-                      )}
-                      {fw > 44 && fh > 22 && (
-                        <text x={cx} y={cy + 9} textAnchor="middle" dominantBaseline="middle"
-                          fontSize={8} fill="#fff" fillOpacity={0.5} fontFamily="Georgia, serif" pointerEvents="none">
-                          {item.width}×{item.height}m
+                          {(item.category as string) || item.name}
                         </text>
                       )}
                     </g>

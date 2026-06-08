@@ -8,7 +8,7 @@ const SCALE = 32;
 
 const FLOORS = [
   {
-    id: 1, name: '1. etasje', width: 7, height: 32,
+    id: 1, name: '1. etasje', width: 5, height: 19.5,
     rooms: [
       { id: 'terrasse_top', name: 'Terrasse 25m²',
         x: 0, y: 0, w: 5.0, h: 5.0,
@@ -41,7 +41,7 @@ const FLOORS = [
   },
 
   {
-    id: 2, name: '2. etasje', width: 7, height: 15,
+    id: 2, name: '2. etasje', width: 5, height: 10.71,
     rooms: [
       { id: 'sov1', name: 'Soverom 13m²',
         x: 0, y: 0, w: 2.8, h: 4.6,
@@ -68,7 +68,7 @@ const FLOORS = [
   },
 
   {
-    id: 3, name: '3. etasje', width: 7, height: 12,
+    id: 3, name: '3. etasje', width: 5, height: 9.65,
     rooms: [
       { id: 'takter', name: 'Takterrasse 17m²',
         x: 0, y: 0, w: 5.0, h: 3.4,

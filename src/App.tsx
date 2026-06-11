@@ -73,11 +73,10 @@ const FLOORS = [
       { id: 'takter', name: 'Takterrasse 17m²',
         x: 0, y: 0, w: 5.0, h: 3.4,
         color: '#e8e0d0', dashed: true },
-      { id: 'stue3_ext', name: '',
-        x: 2.8, y: 7.2, w: 1.2, h: 0.9,
-        color: '#f0ede8' },
       { id: 'stue3', name: 'Stue 15,5m²',
-        x: 0, y: 3.4, w: 4, h: 3.8,
+        x: 0, y: 3.4, w: 4, h: 4.7,
+        lx: 2, ly: 5.3,
+        poly: [[0,3.4],[4,3.4],[4,8.1],[2.8,8.1],[2.8,7.2],[0,7.2]],
         color: '#f0ede8' },
       { id: 'bod3', name: 'Bod 1m²',
         x: 4, y: 3.4, w: 1, h: 1.4,
@@ -1061,19 +1060,29 @@ export default function App() {
                 <rect width={floor.width * SCALE} height={floor.height * SCALE} fill="url(#g1)" />
 
                 {floor.rooms.map((room) => {
-                  const cx = (room.x + room.w / 2) * SCALE;
-                  const cy = (room.y + room.h / 2) * SCALE;
+                  const cx = ((room as any).lx != null ? (room as any).lx : room.x + room.w / 2) * SCALE;
+                  const cy = ((room as any).ly != null ? (room as any).ly : room.y + room.h / 2) * SCALE;
                   const parts = room.name.split(' ');
                   const areal = parts.find((p) => p.includes('m²')) || '';
                   const romNavn = parts.filter((p) => !p.includes('m²')).join(' ');
                   const fs = Math.min(12, (room.w * SCALE) / 7);
+                  const roomStyle = {
+                    fill: room.color, fillOpacity: (room as any).dashed ? 0.2 : 0.65,
+                    stroke: (room as any).dashed ? '#7a6a50' : '#6a5a40',
+                    strokeWidth: (room as any).dashed ? 1 : 1.5,
+                    strokeDasharray: (room as any).dashed ? '6 4' : 'none',
+                  } as React.SVGProps<SVGElement>;
                   return (
                     <g key={room.id}>
-                      <rect x={room.x * SCALE} y={room.y * SCALE} width={room.w * SCALE} height={room.h * SCALE}
-                        fill={room.color} fillOpacity={room.dashed ? 0.2 : 0.65}
-                        stroke={room.dashed ? '#7a6a50' : '#6a5a40'}
-                        strokeWidth={room.dashed ? 1 : 1.5}
-                        strokeDasharray={room.dashed ? '6 4' : 'none'} rx={1} />
+                      {(room as any).poly ? (
+                        <polygon
+                          points={(room as any).poly.map(([x, y]: number[]) => `${x * SCALE},${y * SCALE}`).join(' ')}
+                          {...roomStyle}
+                        />
+                      ) : (
+                        <rect x={room.x * SCALE} y={room.y * SCALE} width={room.w * SCALE} height={room.h * SCALE}
+                          {...roomStyle} rx={1} />
+                      )}
                       <text x={cx} y={cy - (areal ? 7 : 0)} textAnchor="middle" dominantBaseline="middle"
                         fontSize={fs} fill={room.dashed ? '#6a5a40' : '#5a4a30'} fontFamily="Georgia, serif">
                         {romNavn}

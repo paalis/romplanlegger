@@ -193,12 +193,17 @@ export default function App() {
   const floor = FLOORS.find((f) => f.id === activeFloor)!;
   const selItem = furniture.find((f) => f.id === selected);
 
+  const svgPRS = (r: DOMRect, vbW: number, vbH: number) => {
+    const s = Math.min(r.width / vbW, r.height / vbH);
+    return { s, ox: (r.width - s * vbW) / 2, oy: (r.height - s * vbH) / 2 };
+  };
+
   const getSvgXY = (e: React.MouseEvent) => {
     const r = svgRef.current!.getBoundingClientRect();
-    const totalW = floor.width * SCALE + 80;
-    const vbW = totalW / vb.scale;
-    const s = r.width / vbW;
-    return { x: (e.clientX - r.left) / s + vb.x - 40, y: (e.clientY - r.top) / s + vb.y - 40 };
+    const vbW = (floor.width * SCALE + 80) / vb.scale;
+    const vbH = (floor.height * SCALE + 80) / vb.scale;
+    const { s, ox, oy } = svgPRS(r, vbW, vbH);
+    return { x: (e.clientX - r.left - ox) / s + vb.x - 40, y: (e.clientY - r.top - oy) / s + vb.y - 40 };
   };
 
   const onWheel = (e: React.WheelEvent) => {
@@ -206,23 +211,27 @@ export default function App() {
     if (!svgRef.current) return;
     const r = svgRef.current.getBoundingClientRect();
     const totalW = floor.width * SCALE + 80;
+    const totalH = floor.height * SCALE + 80;
     const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
     const newScale = Math.max(0.5, Math.min(8, vb.scale * factor));
     const vbW = totalW / vb.scale;
-    const s = r.width / vbW;
-    const mx = (e.clientX - r.left) / s + vb.x;
-    const my = (e.clientY - r.top) / s + vb.y;
+    const vbH = totalH / vb.scale;
+    const { s, ox, oy } = svgPRS(r, vbW, vbH);
+    const mx = (e.clientX - r.left - ox) / s + vb.x;
+    const my = (e.clientY - r.top - oy) / s + vb.y;
     const newVbW = totalW / newScale;
-    setVb({ scale: newScale, x: mx - (e.clientX - r.left) * newVbW / r.width, y: my - (e.clientY - r.top) * newVbW / r.width });
+    const newVbH = totalH / newScale;
+    const { s: ns, ox: nox, oy: noy } = svgPRS(r, newVbW, newVbH);
+    setVb({ scale: newScale, x: mx - (e.clientX - r.left - nox) / ns, y: my - (e.clientY - r.top - noy) / ns });
   };
 
   const onMouseMove = useCallback((e: React.MouseEvent) => {
     if (dragging) {
       const r = svgRef.current!.getBoundingClientRect();
-      const totalW = floor.width * SCALE + 80;
-      const vbW = totalW / vb.scale;
-      const s = r.width / vbW;
-      const p = { x: (e.clientX - r.left) / s + vb.x - 40, y: (e.clientY - r.top) / s + vb.y - 40 };
+      const vbW = (floor.width * SCALE + 80) / vb.scale;
+      const vbH = (floor.height * SCALE + 80) / vb.scale;
+      const { s, ox, oy } = svgPRS(r, vbW, vbH);
+      const p = { x: (e.clientX - r.left - ox) / s + vb.x - 40, y: (e.clientY - r.top - oy) / s + vb.y - 40 };
       setFurniture((prev) =>
         prev.map((f) =>
           f.id === dragging
@@ -233,12 +242,12 @@ export default function App() {
     } else if (panStart) {
       panMovedRef.current = true;
       const r = svgRef.current!.getBoundingClientRect();
-      const totalW = floor.width * SCALE + 80;
-      const vbW = totalW / vb.scale;
-      const s = r.width / vbW;
+      const vbW = (floor.width * SCALE + 80) / vb.scale;
+      const vbH = (floor.height * SCALE + 80) / vb.scale;
+      const { s } = svgPRS(r, vbW, vbH);
       setVb((prev) => ({ ...prev, x: panStart.vx - (e.clientX - panStart.cx) / s, y: panStart.vy - (e.clientY - panStart.cy) / s }));
     }
-  }, [dragging, dragOffset, panStart, vb.scale, floor.width]);
+  }, [dragging, dragOffset, panStart, vb.scale, floor.width, floor.height]);
 
   const onMouseUp = useCallback(() => { setDragging(null); setPanStart(null); }, []);
 
@@ -1019,8 +1028,8 @@ export default function App() {
 
         {/* ── CANVAS / MAIN AREA ── */}
         {view === 'plan' && (
-          <div style={{ flex: 1, overflow: 'auto', padding: isMobile ? 16 : 28, background: '#16140f' }}>
-            <div style={{ marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column', background: '#16140f' }}>
+            <div style={{ padding: isMobile ? '10px 16px' : '10px 28px', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ fontSize: 10, letterSpacing: 2, color: '#4a3a28', textTransform: 'uppercase' as any, fontFamily: 'system-ui, -apple-system, "Segoe UI", sans-serif', fontWeight: 500 }}>
                 1 rute = 1 m &nbsp;·&nbsp; {floorItems.length} møbel{floorItems.length !== 1 ? 'er' : ''} plassert
               </div>
@@ -1037,14 +1046,14 @@ export default function App() {
                   style={{ width: 26, height: 26, background: '#211e17', border: '1px solid #3a342a', color: '#9a8a70', cursor: 'pointer', fontSize: 16, lineHeight: 1, borderRadius: 3 }}>−</button>
               </div>
             </div>
-            <div style={{ maxWidth: floor.width * SCALE * 2 + 80, width: '100%' }}>
+            <div style={{ flex: 1, position: 'relative' }}>
             <svg ref={svgRef}
               viewBox={`${vb.x} ${vb.y} ${(floor.width * SCALE + 80) / vb.scale} ${(floor.height * SCALE + 80) / vb.scale}`}
               onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseLeave={onMouseUp}
               onMouseDown={(e) => { if (!dragging) { panMovedRef.current = false; setPanStart({ cx: e.clientX, cy: e.clientY, vx: vb.x, vy: vb.y }); } }}
               onWheel={onWheel}
               onClick={() => { if (!panMovedRef.current) setSelected(null); }}
-              style={{ width: '100%', height: 'auto', cursor: dragging ? 'grabbing' : panStart ? 'grabbing' : 'grab', userSelect: 'none', display: 'block' }}>
+              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', cursor: dragging ? 'grabbing' : panStart ? 'grabbing' : 'grab', userSelect: 'none', display: 'block' }}>
               <defs>
                 <pattern id="g1" width={SCALE} height={SCALE} patternUnits="userSpaceOnUse">
                   <path d={`M ${SCALE} 0 L 0 0 0 ${SCALE}`} fill="none" stroke="#252018" strokeWidth="0.6" />
